@@ -39,27 +39,15 @@ defaults exist for a human running a check by hand on Windows.
 
 ## Install
 
-Clone this repo somewhere on disk, then symlink (or copy) the skill
-directories into a project's `.claude/skills/`, or into
-`~/.claude/skills/` for global availability:
-
 ```bash
-git clone https://github.com/tayaee/autotdd.git ~/git/autotdd
-
-ln -s ~/git/autotdd/.claude/skills/tdd2    ~/.claude/skills/tdd2
-ln -s ~/git/autotdd/.claude/skills/acpd    ~/.claude/skills/acpd
-ln -s ~/git/autotdd/.claude/skills/autotdd ~/.claude/skills/autotdd
+npx skills add mattpocock/skills -g
+npx skills add tayaee/autotdd -g
 ```
 
-To make it project-scoped instead (only visible while working inside
-one repo), symlink into that repo's `.claude/skills/` instead of
-`~/.claude/skills/` — Claude Code discovers skills from any nested
-`.claude/skills/` directory.
+## Quickstart
 
-`tdd2` also requires Matt Pocock's `tdd` skill to already be installed
-separately (e.g. at `~/.claude/skills/tdd/`) — `autotdd` checks for it
-and tells you if it's missing, but doesn't install it for you (this
-package doesn't know where you got it from).
+* Use `/grill-with-docs` to create docs/adr/adr-*.md, docs/prd/prd-*.md and issues/issue-*.md.
+* Use `/autotdd` or `/autotdd issue #s` to repeat /tdd (implmentation) and /aacp (git add -u, commit, push, deploy).
 
 ## Conventions these skills assume in the target repo
 
