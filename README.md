@@ -46,9 +46,9 @@ npx skills add tayaee/autotdd -g
 
 ## Quickstart
 
-* Use `/grill-with-docs` to create docs/adr/adr-*.md, docs/prd/prd-*.md and issues/issue-*.md.
+* Use `/grill-with-docs` to create `issues/issue-*.md` (and optionally `docs/adr/adr-*.md`, `docs/sdd/sdd-*.md`, `docs/prd/prd-*.md`).
 * Edit deploy.{bat,ps1,sh} to automatically deploy your solution to `dev` environment (`deploy.sh --env dev`).
-* Use `/autotdd` or `/autotdd [issue #s]` to repeat /tdd (implmentation) and /aacp (git add -u, commit, push, deploy).
+* Use `/autotdd` or `/autotdd [issue #s]` to repeat /tdd (implmentation) and /aacp (`git add -u`, `git commit`, `git push`, `deploy.{bat,ps1,sh} --env dev`).
 
 ## Conventions these skills assume in the target repo
 
