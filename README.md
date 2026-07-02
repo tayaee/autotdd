@@ -39,14 +39,22 @@ defaults exist for a human running a check by hand on Windows.
 
 ## Install
 
-Symlink (or copy) the skill directories into a project's
-`.claude/skills/`, or into `~/.claude/skills/` for global availability:
+Clone this repo somewhere on disk, then symlink (or copy) the skill
+directories into a project's `.claude/skills/`, or into
+`~/.claude/skills/` for global availability:
 
 ```bash
-ln -s /path/to/autotdd/.claude/skills/tdd2    ~/.claude/skills/tdd2
-ln -s /path/to/autotdd/.claude/skills/acpd    ~/.claude/skills/acpd
-ln -s /path/to/autotdd/.claude/skills/autotdd ~/.claude/skills/autotdd
+git clone https://github.com/tayaee/autotdd.git ~/git/autotdd
+
+ln -s ~/git/autotdd/.claude/skills/tdd2    ~/.claude/skills/tdd2
+ln -s ~/git/autotdd/.claude/skills/acpd    ~/.claude/skills/acpd
+ln -s ~/git/autotdd/.claude/skills/autotdd ~/.claude/skills/autotdd
 ```
+
+To make it project-scoped instead (only visible while working inside
+one repo), symlink into that repo's `.claude/skills/` instead of
+`~/.claude/skills/` — Claude Code discovers skills from any nested
+`.claude/skills/` directory.
 
 `tdd2` also requires Matt Pocock's `tdd` skill to already be installed
 separately (e.g. at `~/.claude/skills/tdd/`) — `autotdd` checks for it
