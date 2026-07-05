@@ -60,6 +60,49 @@ either way of confirming is fine.)
   of `tdd`'s sibling skills are present either to point at, just report
   that `tdd` is missing and required, and stop.
 
+## UI dependency check — run when target issues touch UI files
+
+After the `tdd` dependency check passes, and once the target issue list
+is known (after the user confirms for the no-number case, or immediately
+for the explicit-number case), apply `tdd2`'s **UI-touching test** to
+every target issue file — the single definition lives in `tdd2`'s step 1:
+references to `templates/`/`.html`/`.css`/`.js` *plus* at least one
+user-visible browser behaviour in the requirements; an extension match
+alone doesn't count.
+
+If **no UI-touching issues** are in the target list → skip this check
+entirely and proceed to the per-issue loop.
+
+If **any UI-touching issue** is found:
+
+1. **Check the `agent-browser` skill** — look for it the same way as
+   `tdd`:
+
+   ```bash
+   [ -f ~/.claude/skills/agent-browser/SKILL.md ] || \
+   [ -f "$(git rev-parse --show-toplevel 2>/dev/null)/.claude/skills/agent-browser/SKILL.md" ]
+   ```
+
+   Or confirm against the Available Skills listing already in context —
+   either method is fine.
+
+2. **Found** → proceed to the per-issue loop. `tdd2`'s step 10 will use
+   it for automated browser verification.
+
+3. **Not found** → install it. Unlike the `tdd` dependency (whose
+   origin this package doesn't know, so it never guesses an install
+   command), `agent-browser` has a known pinned source, so installing
+   it unattended is fine — always from exactly this source, never from
+   a search result:
+
+   ```bash
+   npx skills add vercel-labs/agent-browser -g -y
+   ```
+
+4. Re-confirm that `agent-browser/SKILL.md` exists. If the installation
+   failed for any reason → **stop and report**. Do not proceed with
+   UI-touching issues without browser verification capability.
+
 ## Two ways to invoke it
 
 ### `/autotdd <numbers>` — scope given, runs immediately
@@ -113,6 +156,13 @@ treat every extracted number as a listed issue, in the order given.
 > upfront "run through all N?" question (no-number case only) and the
 > dependency check above are the entire interactive/blocking surface of
 > this skill.
+
+> **Note on UI verification:** `tdd2`'s step 10 auto-triggers for any
+> UI-touching issue (per the test in `tdd2`'s step 1), even without an
+> explicit `### UI 검증` section. The pre-loop check above installs
+> the `agent-browser` skill (`vercel-labs/agent-browser`) when it's
+> missing, so an unattended run only stops on UI verification if that
+> installation fails — or if the browser verification itself fails.
 
 `autotdd 1 2 3` is:
 

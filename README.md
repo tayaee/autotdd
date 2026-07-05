@@ -37,6 +37,15 @@ copied into the project). `deploy.sh` only ever calls the `.sh`
 defaults and `deploy.ps1` only ever calls the `.ps1` defaults; `.bat`
 defaults exist for a human running a check by hand on Windows.
 
+UI-touching issues (the issue body references `templates/`/`.html`/
+`.css`/`.js` files *and* the requirements describe user-visible browser
+behaviour — the single definition is in `tdd2`'s step 1) get a browser
+verification step in `tdd2` via the `agent-browser` skill
+(`vercel-labs/agent-browser`), even without an explicit `### UI 검증`
+section. `autotdd` installs that skill automatically before its loop
+whenever a target issue is UI-touching, so unattended runs don't stall
+on it.
+
 ## Install
 
 ```bash

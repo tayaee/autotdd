@@ -83,6 +83,30 @@ failure has an unambiguous line between what's live and what isn't.
 ## Procedure
 
 1. Read `issues/issue-#.md` to understand what's being built.
+
+   **UI-touching test** (the single definition — used here, in step 10,
+   and by `/autotdd`'s pre-loop check): the issue body references
+   `templates/` paths or `.html`/`.css`/`.js` files, **and** at least
+   one requirement in `## 요구사항` describes user-visible browser
+   behaviour. A file-extension match alone does not qualify — backend
+   Node scripts, build configs, and email templates are not UI. When
+   in doubt, ask: does a user see or click this in a browser?
+
+   If the issue is UI-touching and the `agent-browser` **skill**
+   (source: `vercel-labs/agent-browser`) is not installed (not in the
+   Available Skills listing and no `agent-browser/SKILL.md` under
+   `~/.claude/skills/` or this repo's `.claude/skills/`), warn once:
+
+   > ⚠️ This issue touches UI files but the `agent-browser` skill is
+   > not installed. Step 10 (UI verification) will pause on a manual
+   > checklist, then auto-install it as the fallback. To skip the
+   > pause, install it now:
+   > `npx skills add vercel-labs/agent-browser -g -y`
+
+   Then continue — `tdd2` does not block on this. The warning is
+   informational; under `/autotdd` the pre-loop check installs it
+   before this step is ever reached.
+
 2. Implement via red→green→refactor: write the failing test first,
    then only enough code to pass it, at pre-agreed seams (the public
    boundary you test at — never internals). No implementation-coupled
@@ -130,21 +154,33 @@ failure has an unambiguous line between what's live and what isn't.
    - **Python projects only**: also run `run-pyright-full` (whole
      project, no path restriction — slower than step 5's `run-pyright`)
      before moving on. Same failure handling as above.
-10. **UI verification** — only if the issue has a `### UI 검증`
-    section:
-    - `agent-browser` MCP available → drive the golden path and error
-      cases directly, confirm no console errors.
-    - Not available → print the issue's manual-verification checklist
-      and ask the user to check it. Wait up to 2 minutes (a response
-      interrupts the wait and its content is used to continue). No
-      response after 2 minutes → post a 30-second countdown warning,
-      wait 30s more, then fall back to the `agent-browser` skill for
-      automated verification.
-    - This step is never skipped — only the *method* varies. **Exception:
-      when running as part of `/autotdd`**, that skill's
-      fully-automatic mode forbids waiting on a human — if
-      `agent-browser` isn't available, stop and report instead of
-      prompting-then-waiting.
+10. **UI verification** — triggered when the issue has a `### UI 검증`
+    section, **or** when the issue is UI-touching per the test defined
+    in step 1 (extension match *plus* user-visible browser behaviour —
+    never on a file-extension match alone).
+
+    **If UI-touching but no `### UI 검증` section exists:** derive a
+    minimal checklist from the issue's `## 요구사항` section — one
+    check per user-visible behaviour listed — and insert the section
+    into `issues/issue-#.md` now (before verifying). Stage the updated
+    file with the rest at step 12.
+
+    Then, with a checklist in hand (explicit or derived):
+    - `agent-browser` skill installed → drive the golden path and each
+      checklist item directly; confirm no console errors.
+    - Not installed → print the checklist and ask the user to check it.
+      Wait up to 2 minutes (a response interrupts the wait and its
+      content is used to continue). No response after 2 minutes → post
+      a 30-second countdown warning, wait 30s more, then install the
+      skill (`npx skills add vercel-labs/agent-browser -g -y`) and run
+      the automated verification with it. If the installation fails,
+      stop and report.
+    - This step is never skipped — only the *method* varies.
+      **Exception: when running as part of `/autotdd`**, that skill's
+      fully-automatic mode forbids waiting on a human — its pre-loop
+      check installs `agent-browser` up front, so this branch normally
+      never arises there; if it somehow does, stop and report instead
+      of prompting-then-waiting.
 11. Update `issues/issue-#.md`'s `## 구현 결과` section: completion
     timestamp (ISO 8601), changed files, deviation from plan (or
     "없음"), and the verify result (this script's pass/fail +
