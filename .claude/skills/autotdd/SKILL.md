@@ -1,6 +1,6 @@
 ---
 name: autotdd
-description: Fully-automatic mode — runs tdd2 then acpd for each issue, one issue completely finished (implement+verify+merge+push+deploy) before the next starts, never batching, never prompting mid-run. With no issue numbers, lists everything left in issues/ and asks once whether to run through all of it. Use when the user says "/autotdd", "autotdd #", or gives a list/range of issue numbers to fully implement and ship unattended.
+description: Fully-automatic mode — runs tdd2 then acpd for each issue, one issue completely finished (implement+verify+merge+push+deploy) before the next starts, never batching, never prompting mid-run. With no issue numbers, lists everything left in issues/ and asks once whether to run through all of it. Optionally runs each issue in its own throwaway git worktree (the `worktree` keyword) for isolation — still one issue at a time, each merged into main immediately before the next starts. Use when the user says "/autotdd", "autotdd #", or gives a list/range of issue numbers to fully implement and ship unattended.
 ---
 
 # autotdd — tdd2, then acpd, per issue, fully automatic
@@ -132,6 +132,26 @@ if `tdd` is missing, not a question). Once the run starts (whichever
 way it started), it does not ask anything else — see "The one rule
 that matters" below for what that means concretely.
 
+## Optional `worktree` keyword — isolation, not concurrency
+
+Both invocation forms above accept an extra `worktree` keyword
+anywhere in the input (`autotdd worktree 100 101 102`, `autotdd 100
+101 102 worktree`, or bare `autotdd worktree` for the no-number case).
+Strip it out before applying the number-parsing rules below — it is
+never a number and never counts as scope.
+
+**"Worktree" means isolation, not concurrency.** Issues are still
+processed one at a time, in order, exactly like the default loop —
+`worktree` only changes *where* each issue's `tdd2`/`acpd` pair runs
+(a throwaway sibling checkout instead of the directory you're standing
+in). The payoff: your current checkout stays untouched while the run
+is in progress, so you can inspect `main` mid-run, or point a separate
+`autotdd` invocation at a different set of issue numbers, without the
+two colliding.
+
+No `worktree` keyword → default per-issue loop (below). `worktree`
+present → see "Worktree mode" instead, further down.
+
 ## Parsing an explicit issue list
 
 | Input | Meaning |
@@ -141,8 +161,11 @@ that matters" below for what that means concretely.
 | `autotdd 100, 101, 102` | issues 100, 101, 102 |
 | `autotdd 100 to 110` | issues 100–110 inclusive |
 | `autotdd 100 ~ 110` | issues 100–110 inclusive |
+| `autotdd worktree 100 101 102` | issues 100, 101, 102, worktree mode |
+| `autotdd 100 to 110 worktree` | issues 100–110 inclusive, worktree mode |
 
-Rule: extract all numbers from the input. If there are exactly two and
+Rule: strip the `worktree` keyword first (see above) if present, then
+extract all numbers from what's left. If there are exactly two and
 they're joined by `to` or `~`, expand to the inclusive range. Otherwise
 treat every extracted number as a listed issue, in the order given.
 
@@ -164,6 +187,12 @@ treat every extracted number as a listed issue, in the order given.
 > missing, so an unattended run only stops on UI verification if that
 > installation fails — or if the browser verification itself fails.
 
+> **Note on worktree mode:** the identical rule applies — one issue
+> fully finished (through its `git merge --ff-only` into `main`) before
+> the next one starts. Worktree mode (below) only changes where each
+> iteration's `tdd2`+`acpd` pair physically runs; it never changes this
+> one-at-a-time, no-batching ordering.
+
 `autotdd 1 2 3` is:
 
 ```
@@ -181,7 +210,7 @@ checkpoint — a mid-batch failure has an unambiguous boundary between
 what's live and what's untouched. Stacking implementations first
 destroys that boundary.
 
-## Per-issue loop
+## Per-issue loop (default — no worktree)
 
 For each issue `#` in the target list, **check its state first** —
 don't redo finished work:
@@ -214,3 +243,112 @@ for # in <target list>:
   issue failed and at which step; do not proceed to the remaining
   issues.
 - On success, report the full list of completed issue numbers.
+
+## Worktree mode
+
+Triggered by the `worktree` keyword (see above). Same target-issue
+list, same one-at-a-time ordering, same "check state first" rule as
+the default loop — only the mechanics of each iteration differ.
+Neither `tdd2` nor `acpd` are modified for this: they run completely
+unmodified, just with their cwd inside a throwaway worktree instead of
+the repo you're standing in.
+
+Naming convention, resolved once per issue from the repo root
+(`git rev-parse --show-toplevel`):
+
+| | Value |
+|---|---|
+| Worktree path | `../<repo-name>-issue-<#>` (sibling of the repo, not inside it) |
+| Branch | `issue-<#>` |
+
+For each issue `#` in the target list:
+
+1. **Check state first**, on `main`, same test as the default loop
+   (`구현 완료 일시` still `(미정)`?). If it's already filled in
+   (implemented earlier but never archived — nothing to isolate) → run
+   `acpd #` directly on `main`, no worktree involved, then move on to
+   the next `#`.
+2. Otherwise, from `main` at its current tip:
+
+   ```bash
+   git worktree add ../<repo-name>-issue-<#> -b issue-<#>
+   ```
+
+3. Inside that worktree: `tdd2 #`, then `acpd #` — unmodified, exactly
+   as the default loop runs them. `acpd`'s own commit, push, and
+   `deploy --env dev` all happen on the `issue-<#>` branch here; that's
+   fine, because step 2 guarantees `issue-<#>` never diverges from
+   `main` except by this one issue's commit(s) — so whatever gets
+   deployed is byte-identical to what `main` will contain after step 4.
+4. Back on `main`:
+
+   ```bash
+   git merge --ff-only issue-<#>
+   ```
+
+   - **Succeeds** → go to step 5.
+   - **Fails** (only possible if `main` moved for some reason since
+     step 2) → attempt recovery, once:
+     1. `git -C ../<repo-name>-issue-<#> rebase main`
+     2. **Rebase hits conflicts** → attempt one AI-assisted resolution:
+        run, once, in that worktree:
+
+        ```bash
+        claude --model sonnet -p "Resolve the git rebase conflicts in this worktree. Conflicted files: $(git diff --name-only --diff-filter=U). Resolve them preserving both sides' intent, stage the resolved files, and run 'git rebase --continue'. Do not skip or abort the rebase."
+        ```
+
+        - Resolved (rebase completes with no conflict markers left) →
+          **re-run the same verification this issue already passed
+          once** (`acpd`'s five-check Python gate if `pyproject.toml`
+          exists at the repo root, otherwise whatever `tdd2` steps 5–9
+          used) inside the worktree.
+          - Passes → retry `git merge --ff-only issue-<#>` on `main`,
+            go to step 5. Note in the final report that this issue
+            needed an AI-assisted rebase resolution.
+          - Fails → **stop the whole run** (see below), and still note
+            that the AI-assisted resolution was attempted.
+        - Not resolved (still conflicted, or `claude` itself failed) →
+          **stop the whole run** (see below), noting the attempt and
+          its failure.
+     3. No conflicts on rebase but still not fast-forwardable, or any
+        other unexpected git failure → **stop the whole run** (see
+        below).
+5. `git push origin main`
+6. Clean up — **only after a successful merge**:
+
+   ```bash
+   git branch -d issue-<#>
+   git push origin --delete issue-<#>
+   git worktree remove ../<repo-name>-issue-<#>
+   ```
+
+7. Move to the next `#`.
+
+Result: `main`'s history stays linear — no merge commits, nothing to
+distinguish this from having worked directly on `main` the whole time.
+This is deliberate: it's a direct fix for the old failure mode where
+several issues only showed up as a single combined integration at the
+end — every issue now lands on `main`, via its own `git push origin
+main`, immediately after it finishes and before the next one starts.
+
+### Stopping the whole run (worktree mode)
+
+Same rule as the default loop's "any failure stops the whole run
+immediately" — extended with one difference: **do not clean up the
+failing issue's worktree or branch.** Leave `../<repo-name>-issue-<#>`
+and its `issue-<#>` branch exactly as they are — don't delete, don't
+force anything — and report:
+
+- Which issue failed and at which step (rebase conflict / AI-resolve
+  attempted and its outcome / post-resolve re-verification failure /
+  other).
+- The worktree path and branch name, so the user can go inspect and
+  resolve it by hand.
+- Which issues before it already completed and merged into `main`
+  (those stay merged — same "clean checkpoint" reasoning as the
+  default loop).
+
+Always state explicitly in the report whether an AI-assisted rebase
+resolution was attempted and whether it succeeded — even when the run
+as a whole completes successfully. It's a silent step by default and
+the user should know it fired.
