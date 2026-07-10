@@ -241,33 +241,41 @@ def main():
             else:
                 level_match = re.search(r'\[(ERROR|CRITICAL)\]', line)
                 if level_match:
-                    # 일반 에러 라인
-                    latest_ts = extract_timestamp(line)
-                    after_level = line[level_match.end():].strip()
+                    # 바로 다음이나 그 다음 줄에 Traceback이 나오는지 확인 (traceback의 헤더로 간주하여 중복 수집 방지)
+                    is_tb_header = False
+                    for check_idx in range(i + 1, min(len(all_lines), i + 3)):
+                        if "Traceback (most recent call last):" in all_lines[check_idx]:
+                            is_tb_header = True
+                            break
                     
-                    logger = "root"
-                    message = after_level
-                    m = re.match(r'^([^\s\-]+)\s*-\s*(.*)$', after_level)
-                    if m:
-                        logger = m.group(1)
-                        message = m.group(2)
+                    if not is_tb_header:
+                        # 일반 에러 라인
+                        latest_ts = extract_timestamp(line)
+                        after_level = line[level_match.end():].strip()
+                        
+                        logger = "root"
+                        message = after_level
+                        m = re.match(r'^([^\s\-]+)\s*-\s*(.*)$', after_level)
+                        if m:
+                            logger = m.group(1)
+                            message = m.group(2)
 
-                    normalized = normalize_message(message)
-                    normalized_hash = hashlib.sha1(normalized.encode('utf-8')).hexdigest()[:8]
-                    dedup_key = f"line:{filename}:{logger}:{normalized_hash}"
+                        normalized = normalize_message(message)
+                        normalized_hash = hashlib.sha1(normalized.encode('utf-8')).hexdigest()[:8]
+                        dedup_key = f"line:{filename}:{logger}:{normalized_hash}"
 
-                    pre_start = max(0, i - 10)
-                    post_end = min(len(all_lines), i + 1 + 10)
-                    excerpt = "".join(all_lines[pre_start : post_end])
-                    excerpt = truncate_excerpt(excerpt)
+                        pre_start = max(0, i - 10)
+                        post_end = min(len(all_lines), i + 1 + 10)
+                        excerpt = "".join(all_lines[pre_start : post_end])
+                        excerpt = truncate_excerpt(excerpt)
 
-                    errors_found.append({
-                        "dedup_key": dedup_key,
-                        "latest_ts": latest_ts,
-                        "excerpt": excerpt,
-                        "line_idx": i,
-                        "logfile": filename
-                    })
+                        errors_found.append({
+                            "dedup_key": dedup_key,
+                            "latest_ts": latest_ts,
+                            "excerpt": excerpt,
+                            "line_idx": i,
+                            "logfile": filename
+                        })
                 i += 1
 
         # 이번 스캔 구간 내에 있는 에러 필터링
