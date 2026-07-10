@@ -13,7 +13,7 @@ tmp_dir="$(mktemp -d)"
 origin_dir="$tmp_dir/origin.git"
 work_dir="$tmp_dir/work"
 
-git init --bare -q "$origin_dir"
+git init --bare -q -b main "$origin_dir"
 
 git clone -q "$origin_dir" "$work_dir" 2>/dev/null
 git -C "$work_dir" config user.name "Fixture Bot"

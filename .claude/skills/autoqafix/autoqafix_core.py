@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import hashlib
 import os
+import re
 import shutil
 import signal
 import socket
@@ -207,6 +208,100 @@ def run_with_timeout(cmd: list[str], timeout_sec: float) -> tuple[int, str, str,
             subprocess.run(["taskkill", "/PID", str(proc.pid), "/T", "/F"])
         stdout, stderr = proc.communicate()
         return -1, stdout, stderr, True
+
+
+def _git(repo: Path, *args: str, timeout: float = 30) -> subprocess.CompletedProcess:
+    """Run a git command scoped to `repo` only -- never touches global
+    config (docs/autoqafix-design.md 번호 예약 프로토콜, requirement 2)."""
+    return subprocess.run(
+        ["git", "-C", str(repo), *args], capture_output=True, text=True, timeout=timeout
+    )
+
+
+def next_number(repo: Path, stream: str) -> int:
+    """Highest existing <stream>-<N> across issues/ (archive included) and
+    regression-tests/verify-<stream>-<N>.sh, plus 1. `stream` is "issue"
+    or "autofix"."""
+    repo = Path(repo)
+    numbers: list[int] = []
+
+    issue_pat = re.compile(rf"^{re.escape(stream)}-(\d+)")
+    issues_dir = repo / "issues"
+    if issues_dir.is_dir():
+        for f in issues_dir.rglob(f"{stream}-*.md"):
+            m = issue_pat.match(f.name)
+            if m:
+                numbers.append(int(m.group(1)))
+
+    verify_pat = re.compile(rf"^verify-{re.escape(stream)}-(\d+)")
+    verify_dir = repo / "regression-tests"
+    if verify_dir.is_dir():
+        for f in verify_dir.glob(f"verify-{stream}-*.sh"):
+            m = verify_pat.match(f.name)
+            if m:
+                numbers.append(int(m.group(1)))
+
+    return (max(numbers) + 1) if numbers else 1
+
+
+def reserve_number(repo: Path, stream: str, summary: str, purpose: str) -> tuple[int, Path]:
+    """Reserve the next <stream>-<N>, racing safely against other clones
+    reserving concurrently: push success is the atomicity device. On a
+    rejected push, undoes the local reservation commit, pulls, and
+    retries with a freshly computed N (up to 10 attempts)."""
+    repo = Path(repo)
+    max_attempts = 10
+
+    for _ in range(max_attempts):
+        n = next_number(repo, stream)
+        path = repo / "issues" / f"{stream}-{n}.md"
+        reported_at = datetime.now(timezone.utc).isoformat()
+        content = (
+            f"# {stream}-{n}: {summary}\n"
+            f"reported-by: {purpose}@{socket.gethostname()} {reported_at}\n"
+        )
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(content)
+
+        _git(repo, "add", str(path.relative_to(repo)))
+        _git(repo, "commit", "-q", "-m", f"{stream}-{n}: 번호 예약")
+        push = _git(repo, "push")
+        if push.returncode == 0:
+            return n, path
+
+        # Push rejected (another clone won the race for N): drop our
+        # reservation commit, sync up, and try again with a fresh N.
+        _git(repo, "reset", "--hard", "HEAD~1")
+        _git(repo, "pull", "--rebase", "-q")
+
+    raise RuntimeError(f"reserve_number: gave up after {max_attempts} attempts for stream '{stream}'")
+
+
+def finalize_item(repo: Path, path: Path, body: str) -> None:
+    """Append `body` after a reserved item's two-line header and push the
+    result. Reuses the reservation's own `<stream>-<N>: <summary>` line as
+    the commit message. Retries once via pull --rebase on a rejected
+    push."""
+    repo = Path(repo)
+    path = Path(path)
+
+    existing = path.read_text()
+    first_line = existing.splitlines()[0] if existing else ""
+    _, _, summary = first_line.partition(": ")
+    commit_prefix = path.stem  # e.g. "autofix-1"
+
+    new_content = existing.rstrip("\n") + "\n" + body
+    if not new_content.endswith("\n"):
+        new_content += "\n"
+    path.write_text(new_content)
+
+    rel = path.relative_to(repo)
+    _git(repo, "add", str(rel))
+    _git(repo, "commit", "-q", "-m", f"{commit_prefix}: {summary}")
+    push = _git(repo, "push")
+    if push.returncode != 0:
+        _git(repo, "pull", "--rebase", "-q")
+        _git(repo, "push")
 
 
 def _selftest() -> int:
