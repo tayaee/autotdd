@@ -47,3 +47,17 @@ dedup-key 규칙.
 ## 검증
 
 `regression-tests/verify-issue-12.sh` 작성: 위 시나리오 전부. jq 사용 가능.
+
+## 구현 결과
+
+**구현 완료 일시**: 2026-07-10T18:36:05-04:00
+
+**변경 파일**:
+- `.claude/skills/autoqafix/log-scan.py` (신규)
+- `regression-tests/verify-issue-12.sh` (신규)
+- `issues/issue-12.md` (수정)
+
+**계획 대비 편차**: 없음.
+
+**검증 결과**: `regression-tests/verify-issue-12.sh` 단독 실행 결과 PASS. `run-regression-tests`를 통해 이전 모든 이슈(3~11)의 회귀 테스트 스크립트도 포함하여 총 10개의 테스트가 성공적으로 통과(PASS=10, FAIL=0)하였습니다.
+
