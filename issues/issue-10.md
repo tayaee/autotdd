@@ -1,38 +1,44 @@
-# issue-10: 번호 예약 프로토콜
+# issue-10: 공용 코어 — preflight와 뮤텍스
+agent-tier: paid-only
 
 ## 배경
 
-여러 머신의 agent가 같은 스트림에 동시 보고해도 번호가 충돌하지 않아야 한다.
-push 성공을 원자성 장치로 쓴다 (docs/autoqafix-design.md "autoqa" 5번).
+모든 진입점이 공유하는 안전장치. `.claude/skills/autoqafix/autoqafix_core.py` 모듈로 만들고
+이후 이슈들의 스크립트가 import한다(같은 디렉토리이므로 sys.path 조작 없이 가능).
 
 ## 요구사항
 
-1. `autoqafix_core.py`에 추가:
-   - `next_number(repo, stream) -> int`: `issues/` 재귀(archive 포함)에서
-     `<stream>-<N>*.md` + `regression-tests/verify-<stream>-<N>.sh`의 최대 N + 1.
-     stream은 `issue` 또는 `autofix`
-   - `reserve_number(repo, stream, summary, purpose) -> (int, Path)`:
-     ① next_number로 후보 N, ② `issues/<stream>-<N>.md`에 두 줄만 기록
-     (`# <stream>-<N>: <summary>` + `reported-by: <purpose>@<hostname> <ISO8601>`),
-     ③ 그 파일만 add·commit(`<stream>-<N>: 번호 예약`)·push,
-     ④ push 거부 시 해당 커밋을 `git reset --hard HEAD~1`로 제거 →
-     `git pull --rebase` → N 재계산 → 재시도(최대 10회, 초과 시 예외),
-     ⑤ 성공 시 (N, 파일경로) 반환
-   - `finalize_item(repo, path, body)`: 예약 파일의 두 줄 뒤에 body를 이어 붙여
-     commit(`<stream>-<N>: <summary>`)·push. push 거부 시 pull --rebase 후 재push
-2. 모든 git 조작은 전달받은 repo(작업 트리) 안에서만. 전역 설정 변경 금지
+1. `.claude/skills/autoqafix/autoqafix_core.py` 작성. 함수:
+   - `preflight(role: str, repo: Path) -> list[str]`: 실패 항목들의 메시지 목록
+     반환(비면 통과). 각 메시지는 정확히 두 줄 `[원인] ...\n[조치] ...`.
+     검사 항목: ① cwd가 git repo 루트(`git rev-parse --show-toplevel` == cwd),
+     ② `issues/` 존재, ③ role이 qa면 `logs/` 존재, ④ `uv` PATH 존재,
+     ⑤ `git config user.name`/`user.email` 설정됨, ⑥ `git ls-remote origin`
+     30초 내 성공, ⑦ role이 fix/dev면 `~/.claude/skills/{autotdd,tdd2,acpd}` 존재
+   - `acquire_lock(role, repo) -> bool` / `release_lock(repo)`:
+     `<repo>/.git/autoqafix.lock`에 `host=`,`pid=`,`role=`,`start=`(ISO8601) 기록.
+     잠금 존재 시: 같은 호스트면 PID 생존 확인, 죽었으면 회수; 시작 후
+     14400초(4시간, env `AUTOQAFIX_LOCK_STALE_SEC`) 초과면 부실로 회수;
+     아니면 False 반환(호출측이 "이미 <role>이 실행 중 (<host>, <start>)" 출력)
+   - `clone_id(repo) -> str`: sha1(절대경로 문자열) hex 앞 12자
+   - `state_dir(repo) -> Path`: `~/.cache/autoqafix/<clone_id>/` (없으면 생성)
+   - `run_with_timeout(cmd, timeout_sec) -> (exit, stdout, stderr, timed_out)`:
+     타임아웃 시 프로세스 그룹 전체 kill (Windows 호환: `subprocess` +
+     `taskkill /T` 분기 주석으로 명시)
+2. 모듈 자체도 PEP-723 헤더 포함, `uv -q run autoqafix_core.py --selftest`로
+   위 함수들의 단위 자체시험 실행 가능
 
 ## 승인 기준
 
-- [ ] 픽스처에서 `reserve_number(..., "autofix", ...)` → `autofix-1.md`가 원격에
-      존재, 내용은 정확히 두 줄
-- [ ] 경합 재현: 클론 A가 예약·push 후, 같은 번호를 로컬에 만들어 둔 클론 B가
-      reserve → B는 push 거부를 겪고 `autofix-2.md`로 성공한다 (원격에 1, 2 공존)
-- [ ] archive에 `autofix-7.md`를 심어두면 next_number가 8을 반환
-- [ ] `regression-tests/verify-autofix-3.sh`(빈 파일)를 심어두면 next_number ≥ 4
-- [ ] finalize 후 원격 파일에 body가 포함된다
+- [ ] 픽스처 repo에서 preflight("qa") 통과(빈 목록), `logs/` 삭제 후 `[원인]` 포함
+      1건 반환
+- [ ] git repo 아닌 디렉토리에서 ① 위반 메시지 반환
+- [ ] 잠금: 1차 acquire True → 2차(다른 role) False → release 후 True.
+      start를 5시간 전으로 조작한 잠금은 회수된다
+- [ ] `run_with_timeout(["sleep","10"], 1)`이 1초 부근에 timed_out=True
+- [ ] `--selftest`가 exit 0
 
 ## 검증
 
-`regression-tests/verify-issue-10.sh` 작성: 픽스처의 bare 원격 + 클론 2개로 위
-시나리오 전부 자동화.
+`regression-tests/verify-issue-10.sh` 작성: `--selftest` 실행 + 픽스처 repo에서의
+preflight/lock 시나리오.

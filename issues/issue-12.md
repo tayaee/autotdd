@@ -1,47 +1,49 @@
-# issue-12: error-to-autofix — 보고 파이프라인 조립
+# issue-12: 로그 스캐너 — 오프셋, 에러 추출, 빈도 랭킹
+agent-tier: paid-only
 
 ## 배경
 
-qa 롤의 완성: 스캔 → dedup → top5 → LLM 작성 → 번호 예약 → push.
-명세: `docs/autoqafix-design.md`의 "autoqa" 전체.
+autoqa의 결정적 심장부. LLM 없이 완전히 동작해야 한다. 명세:
+`docs/autoqafix-design.md`의 "autoqa" 1~3번과 "항목 파일에 들어가는 기계 판독 줄"의
+dedup-key 규칙.
 
 ## 요구사항
 
-1. `.claude/skills/autoqafix/error-to-autofix.py` 작성 (PEP-723). CLI:
-   `uv -q run .claude/skills/autoqafix/error-to-autofix.py --repo <path>`
-2. 절차:
-   ① select-llm 호출(issue-8) — 결과가 로컬 래퍼나 `none`이면 "유료 LLM 부적격,
-   보고 연기" 출력 후 exit 0 (**오프셋 비전진**: log-scan을 --dry-run으로만 사용)
-   ② log-scan 실행(JSON 수신)
-   ③ dedup: `issues/`의 미결 항목(`issue-*`/`autofix-*` 모든 접미사 포함,
-   archive 제외)에서 `dedup-key: <key>` 문자열 검색, 있으면 제외
-   ④ 남은 것 중 count 상위 5개만
-   ⑤ 각 항목: 선정 래퍼를 `-p <프롬프트>`로 호출(경량 타임아웃
-   AUTOQAFIX_LIGHT_TIMEOUT, 기본 1200초). 프롬프트에 포함: excerpt, count, 지시
-   "배경/요구사항/승인 기준 3섹션 형식의 한국어 issue 본문과 첫 줄 제목,
-   그리고 agent-tier(local-ok|paid-only|manual) 판정을 출력하라. 마지막 줄은
-   `TIER: <값>`" — 출력 파싱: 마지막 `TIER:` 줄에서 tier, 첫 줄에서 제목
-   ⑥ reserve_number → finalize_item(issue-10). 본문에 반드시 포함:
-   `dedup-key:` 줄, `agent-tier:` 줄, `frequency: <count> (<window>)` 줄,
-   발췌 코드블록, 지시문 "로그 원문(logs/)을 열지 말 것 — 필요한 발췌는 이 문서에
-   포함됨"
-   ⑦ tier가 `manual`이면 finalize 직후 `-manual`로 `git mv` + commit + push
-   ⑧ 5개 전부 성공 후에만 log-scan을 실제 모드로 재실행해 오프셋 전진.
-   래퍼 호출 실패/타임아웃 시 해당 항목 건너뛰고 오프셋 비전진(다음 사이클 재시도)
-3. 모든 git 조작은 `--repo`가 가리키는 트리 안에서만
+1. `.claude/skills/autoqafix/log-scan.py` 작성 (PEP-723). CLI:
+   `uv -q run .claude/skills/autoqafix/log-scan.py --repo <path> [--state-dir <path>] [--dry-run]`
+   → stdout에 JSON: `{"errors":[{"dedup_key":..., "count":..., "excerpt":...,
+   "latest_ts":..., "logfile":...}, ...], "window":{"start":...,"end":...}}`
+   (count 내림차순, 최대 100개)
+2. 대상: `<repo>/logs/*.log`만 (`.jsonl`, `.log.1` 등 제외)
+3. 오프셋 상태 `<state-dir>/offsets.json` (기본 state-dir는
+   `autoqafix_core.state_dir()`): 파일별 `{prefix_sha1, prefix_len, size, offset}`
+   - 첫 관측 파일: offset=EOF로 기록만 하고 이번 스캔에서 제외
+   - prefix 불일치 또는 size<offset → 새 파일로 간주, offset 0부터
+   - 새 구간이 10MB 초과 시 마지막 10MB만 (건너뛴 바이트 수를 stderr에 경고)
+   - `--dry-run`이면 offsets.json을 갱신하지 않는다 (연기 = dry-run 후 미커밋)
+4. 추출: ① `Traceback (most recent call last):`부터 예외 라인까지의 블록,
+   ② `[ERROR]`/`[CRITICAL]` 라인. `[WARNING]`/`[INFO]` 무시
+5. dedup_key 계산 — 설계 문서 규칙 그대로:
+   - traceback: repo 내부 경로(절대경로가 repo 하위이거나 상대경로가 repo에
+     존재)인 가장 깊은 프레임의 `tb:<상대경로>:<라인>:<예외타입>`
+   - 그 외: `line:<로그파일명>:<로거명>:<정규화해시8>` (숫자열→`#`, 따옴표 내용
+     제거, 공백 축약 후 sha1 앞 8자)
+6. excerpt: 해당 key의 **가장 최근** 발생 지점 앞 10줄 + 블록/라인 자체 + 뒤 10줄,
+   16KB 초과 시 뒤에서 절단하고 `...[truncated]` 표시
+7. latest_ts: 발생 라인(traceback은 직전 타임스탬프 라인)의 타임스탬프 문자열
 
 ## 승인 기준
 
-픽스처 + fake-wrapper(FAKE_OUTPUT_FILE로 준비된 본문·TIER 응답) 사용:
+픽스처 로그(issue-3)를 기준으로:
 
-- [ ] AUTOQAFIX_WRAPPER=<fake, claudecli 역>으로 실행 → 원격에 `autofix-1.md` 생성,
-      본문에 dedup-key/agent-tier/frequency/발췌/지시문 5요소가 모두 있다
-- [ ] 즉시 재실행 → dedup에 걸려 새 항목이 생기지 않는다
-- [ ] TIER: manual 응답 픽스처 → `autofix-N-manual.md`로 원격에 존재
-- [ ] AUTOQAFIX_WRAPPER 미설정 + select-llm이 none인 픽스처 → "보고 연기" 출력,
-      offsets.json 파일이 갱신되지 않았다 (mtime/내용 비교)
-- [ ] 에러 7종을 심으면 top5만 보고된다
+- [ ] 첫 실행(첫 관측)은 `errors:[]` — EOF 초기화 확인
+- [ ] 로그에 새 라인들을 append한 뒤 재실행 → traceback key(count=추가한 반복
+      수)와 ERROR line key가 count 내림차순으로 나온다
+- [ ] WARNING만 append하면 `errors:[]`
+- [ ] 파일을 truncate 후 새 내용 기록 → 새 파일로 감지, 전체 재스캔
+- [ ] `--dry-run` 2회 연속 실행의 출력이 동일하다 (오프셋 비전진)
+- [ ] excerpt에 traceback 전체와 전후 10줄이 포함된다
 
 ## 검증
 
-`regression-tests/verify-issue-12.sh` 작성: 위 전부. 실 LLM 호출 금지.
+`regression-tests/verify-issue-12.sh` 작성: 위 시나리오 전부. jq 사용 가능.

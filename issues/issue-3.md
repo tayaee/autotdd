@@ -1,8 +1,9 @@
 # issue-3: 테스트 인프라 — 픽스처 repo 생성기와 fake 도구들
+agent-tier: paid-only
 
 ## 배경
 
-issue-4 ~ issue-17의 모든 검증은 실제 LLM 크레딧을 쓰지 않아야 한다. 이를 위한
+issue-4 ~ issue-20의 모든 검증은 실제 LLM 크레딧을 쓰지 않아야 한다. 이를 위한
 공용 테스트 도구를 먼저 만든다. 설계 근거: `docs/autoqafix-design.md`.
 
 ## 요구사항

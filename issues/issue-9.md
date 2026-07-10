@@ -1,43 +1,43 @@
-# issue-9: 공용 코어 — preflight와 뮤텍스
+# issue-9: select-llm.py — LLM 선정기
+agent-tier: paid-only
 
 ## 배경
 
-모든 진입점이 공유하는 안전장치. `.claude/skills/autoqafix/autoqafix_core.py` 모듈로 만들고
-이후 이슈들의 스크립트가 import한다(같은 디렉토리이므로 sys.path 조작 없이 가능).
+유효 잔여율 규칙(CONTEXT.md "유효 잔여율")의 단일 구현. 모든 도구가 이것만 호출한다.
 
 ## 요구사항
 
-1. `.claude/skills/autoqafix/autoqafix_core.py` 작성. 함수:
-   - `preflight(role: str, repo: Path) -> list[str]`: 실패 항목들의 메시지 목록
-     반환(비면 통과). 각 메시지는 정확히 두 줄 `[원인] ...\n[조치] ...`.
-     검사 항목: ① cwd가 git repo 루트(`git rev-parse --show-toplevel` == cwd),
-     ② `issues/` 존재, ③ role이 qa면 `logs/` 존재, ④ `uv` PATH 존재,
-     ⑤ `git config user.name`/`user.email` 설정됨, ⑥ `git ls-remote origin`
-     30초 내 성공, ⑦ role이 fix/dev면 `~/.claude/skills/{autotdd,tdd2,acpd}` 존재
-   - `acquire_lock(role, repo) -> bool` / `release_lock(repo)`:
-     `<repo>/.git/autoqafix.lock`에 `host=`,`pid=`,`role=`,`start=`(ISO8601) 기록.
-     잠금 존재 시: 같은 호스트면 PID 생존 확인, 죽었으면 회수; 시작 후
-     14400초(4시간, env `AUTOQAFIX_LOCK_STALE_SEC`) 초과면 부실로 회수;
-     아니면 False 반환(호출측이 "이미 <role>이 실행 중 (<host>, <start>)" 출력)
-   - `clone_id(repo) -> str`: sha1(절대경로 문자열) hex 앞 12자
-   - `state_dir(repo) -> Path`: `~/.cache/autoqafix/<clone_id>/` (없으면 생성)
-   - `run_with_timeout(cmd, timeout_sec) -> (exit, stdout, stderr, timed_out)`:
-     타임아웃 시 프로세스 그룹 전체 kill (Windows 호환: `subprocess` +
-     `taskkill /T` 분기 주석으로 명시)
-2. 모듈 자체도 PEP-723 헤더 포함, `uv -q run autoqafix_core.py --selftest`로
-   위 함수들의 단위 자체시험 실행 가능
+1. `.claude/skills/autoqafix/select-llm.py` 작성 (PEP-723, `uv -q run`)
+2. 후보는 env `AUTOQAFIX_WRAPPERS`(`"<래퍼명>:paid|local,..."` — 나열 순서가
+   우선순위, 기본 `claudecli:paid,minimaxcli:paid,qwencli:local`)로 구성.
+   래퍼별 usage 스크립트를 subprocess로 실행해 JSON 파싱. 명령은 env로 대체 가능:
+   `AUTOQAFIX_USAGE_CMD_<래퍼명 대문자>` (기본: `uv -q run
+   .claude/skills/autoqafix/usage-<래퍼명>.py`, autotdd repo 루트 기준 절대경로로
+   해석). usage 스크립트가 없는 래퍼는 후보 제외 + stderr 경고
+3. 선정 규칙 (docs/autoqafix-design.md "LLM 선정"):
+   - 적격 유료 = `available && effective_remaining_pct >= 50`
+   - 적격이 여럿 → effective 큰 쪽, 동률 → 목록 앞쪽
+   - 유료 부적격 → 로컬(local) 중 `available` 첫 번째
+   - 전부 불가 → stdout에 `none`, exit 2
+4. stdout 한 줄: 선정된 래퍼 이름(`claudecli` | `minimaxcli` | `qwencli` | ...)
+   또는 `none`. exit 0 (none만 2)
+5. `--explain` 플래그: stderr에 후보 전부의 수치와 판정 근거를 표로 출력
+6. env `AUTOQAFIX_WRAPPER`가 설정돼 있으면 usage 조회 없이 그 값을 그대로 출력
+   (강제 지정·테스트 주입점)
 
 ## 승인 기준
 
-- [ ] 픽스처 repo에서 preflight("qa") 통과(빈 목록), `logs/` 삭제 후 `[원인]` 포함
-      1건 반환
-- [ ] git repo 아닌 디렉토리에서 ① 위반 메시지 반환
-- [ ] 잠금: 1차 acquire True → 2차(다른 role) False → release 후 True.
-      start를 5시간 전으로 조작한 잠금은 회수된다
-- [ ] `run_with_timeout(["sleep","10"], 1)`이 1초 부근에 timed_out=True
-- [ ] `--selftest`가 exit 0
+다음 매트릭스를 픽스처(USAGE_FIXTURE 파일들 + AUTOQAFIX_USAGE_CMD_*=cat류)로 검증:
+
+- [ ] claudecli(5h 80, 주간 60 → 유효 60) vs minimaxcli(5h 70, 주간 90 → 유효 70)
+      → 유효 잔여율이 큰 `minimaxcli`
+- [ ] claudecli(90, 40) vs minimaxcli(45, 80) → 둘 다 유효 <50 → qwen UP →
+      `qwencli`
+- [ ] 둘 다 유효 55로 동률 → 목록 앞쪽인 `claudecli`
+- [ ] 전부 불가 → `none` + exit 2
+- [ ] `AUTOQAFIX_WRAPPER=qwencli` → usage 명령 실행 없이 `qwencli`
 
 ## 검증
 
-`regression-tests/verify-issue-9.sh` 작성: `--selftest` 실행 + 픽스처 repo에서의
-preflight/lock 시나리오.
+`regression-tests/verify-issue-9.sh` 작성: 위 매트릭스 전부. 각 케이스의 기대값을
+스크립트 주석에 계산 근거와 함께 남길 것.

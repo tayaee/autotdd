@@ -1,41 +1,36 @@
-# issue-7: usage 스크립트 3종 (claudecli / minimaxcli / qwencli)
+# issue-7: ping 진단 스크립트 18종
+agent-tier: local-ok
 
 ## 배경
 
-LLM 선정의 입력. 이름은 `usage-<래퍼명>.py` 규약(선정기가 이 이름으로 짝을 찾는다).
-참고 구현이 개인 로컬 리포 `~/git/harness-project/.local/bin/tmux-usage-bar.py`의
-`claude_usage()`와 `minimax_quota()`에 있다 — 접근 가능하면 **먼저 그 파일을 읽고
-데이터 소스(캐시 파일 경로/API)를 그대로 재사용**하고, 접근 불가 환경이면 이 명세로
-구현한다. 출력 계약은 `docs/autoqafix-design.md`의 "LLM 선정" 절.
+래퍼 6종이 실제로 응답하는지 사람이 확인하는 진단 도구. 설치 직후·장애 시 수동
+실행용이며 루프의 preflight에는 포함되지 않는다(크레딧 소모 방지).
 
 ## 요구사항
 
-1. `.claude/skills/autoqafix/usage-claudecli.py`, `.claude/skills/autoqafix/usage-minimaxcli.py`,
-   `.claude/skills/autoqafix/usage-qwencli.py` 작성. 모두 PEP-723 헤더(`# /// script`) 포함,
-   `uv -q run <파일>`로 실행 가능
-2. 출력: JSON 한 줄. 키: `provider`, `five_hour_remaining_pct`,
-   `weekly_remaining_pct`, `effective_remaining_pct`(=min(앞의 둘)),
-   `available`(bool). 실패 시에도 JSON을 내되 `available:false` +
-   `"error":"<요지>"` (stderr 오염 금지, exit 0 유지 — 호출측이 파싱만으로 판단)
-3. claude/minimax: tmux-usage-bar.py의 utilization(사용률)을 잔여율로 변환
-   (잔여율 = 100 − 사용률). 데이터 취득 함수는 tmux-usage-bar.py에서 복사하되
-   출처 주석을 남긴다
-4. usage-qwencli.py: 로컬 qwen 서비스 헬스체크. env `QWEN_HEALTH_CMD`(기본:
-   `qwen --version`)를 타임아웃 10초로 실행, exit 0이면 UP. UP →
-   effective 100/available true, DOWN → 0/false
-5. 세 스크립트 모두: env `USAGE_FIXTURE`가 설정되면 그 파일(JSON)을 그대로 읽어
-   출력(테스트 주입점)
+1. `.claude/skills/autoqafix/wrappers/`에 래퍼 6종(claudecli/minimaxcli/qwencli/
+   codexcli/antigravitycli/deepseekcli) 각각의 `ping-<래퍼명>.{sh,ps1,bat}` 작성
+   (18개 파일)
+2. 동작: 같은 디렉토리의 해당 래퍼를 `-p "respond with exactly: pong"`으로 호출,
+   타임아웃 120초(env `PING_TIMEOUT`으로 대체 가능)
+3. 성공(exit 0 + 출력에 `pong` 포함): `OK <래퍼명> (<경과 초>s)` 출력, exit 0
+4. 실패 시 exit 1 + 원인별 안내:
+   - 래퍼 파일 없음 → `[원인] <래퍼> 없음` `[조치] autotdd 설치 확인`
+   - 타임아웃 → `[원인] <T>초 내 무응답` `[조치] 네트워크/서비스 상태, 쿼터 확인
+     (claude: claude.ai, qwen: 로컬 서비스 기동 여부)`
+   - 비정상 종료/pong 불포함 → `[원인] 응답 이상 (exit=<N>)` `[조치] <래퍼> 단독
+     실행으로 에러 메시지 확인`
+5. `.sh`는 래퍼 경로를 env `PING_WRAPPER`로 대체 가능하게(테스트 주입점)
 
 ## 승인 기준
 
-- [ ] `USAGE_FIXTURE=<픽스처>` 지정 시 픽스처 내용이 그대로 한 줄로 나온다
-- [ ] `QWEN_HEALTH_CMD=true uv -q run .claude/skills/autoqafix/usage-qwencli.py` →
-      `effective_remaining_pct: 100`, `QWEN_HEALTH_CMD=false` → `0`
-- [ ] 데이터 소스가 없는 환경(가짜 HOME)에서 usage-claudecli.py가 exit 0 +
-      `available:false` JSON을 낸다
-- [ ] 세 파일 모두 `uv -q run`으로 기동된다 (PEP-723 유효)
+- [ ] `PING_WRAPPER=fake-wrapper.sh`(FAKE_MODE=ok, 출력 pong)로 `ping-claudecli.sh`
+      → `OK` 출력, exit 0
+- [ ] FAKE_MODE=hang + PING_TIMEOUT=2 → 2초 부근에 exit 1 + 타임아웃 안내
+- [ ] FAKE_MODE=fail → exit 1 + `[원인]`/`[조치]` 출력
+- [ ] 18개 파일 모두 존재, `.sh` 6개는 `bash -n` 통과
 
 ## 검증
 
-`regression-tests/verify-issue-7.sh` 작성: 승인 기준 자동화. 실 API 호출이 있는
-경로는 가짜 HOME/픽스처로 차단.
+`regression-tests/verify-issue-7.sh` 작성: 위 시나리오를 fake-wrapper로 자동화.
+실 래퍼 호출(크레딧) 금지.

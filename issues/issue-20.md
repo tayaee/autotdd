@@ -1,36 +1,37 @@
-# issue-20: 설치·운영 문서 (SETUP-autoqafix.md)
+# issue-20: autoqafix-doctor — 사전 점검 도구
+agent-tier: paid-only
 
 ## 배경
 
-사람이 새 머신/새 repo에 스위트를 배치할 때 따라 하는 단일 문서. 마지막 이슈 —
-issue-3 ~ issue-19가 모두 archive된 뒤 작성한다.
+"이 repo에서 스위트가 동작할 것인가"를 사람이 실행 전에 최대한 확인하는 진단.
+preflight(issue-10)의 상위 집합이다.
 
 ## 요구사항
 
-1. `docs/SETUP-autoqafix.md` 작성. 섹션:
-   - **사전 준비**: uv 설치, 사용할 래퍼가 감싸는 CLI(`claude`/`qwen` 등)를
-     PATH에, git identity, autotdd 클론 위치(또는 스킬 설치 + `install.sh`)
-   - **점검 순서**: ① `autoqafix-doctor.{sh,bat}` (대상 repo에서), ② 실 LLM 확인은
-     `ping-claudecli.*` 등 사용하는 래퍼 것만 (크레딧 소모 주의 문구), ③ 픽스처 기반 전체 회귀:
-     `for f in regression-tests/verify-*.sh; do bash "$f" || echo "FAIL $f"; done`
-   - **Windows production 배치**: `shell:startup`에 지름길 생성, 대상 =
-     `<autotdd>\autoqafix-loop.bat --reboot-on-fix`, **"시작 위치" = 대상 앱 repo**
-     (이 설정이 cwd 규약의 전부임을 강조), 재시동 폭주 가드 설명
-   - **WSL 수동 사용**: 대상 repo에서 `<autotdd>/autoqa.sh`, `autofix.sh` 직접 실행
-   - **Claude Code 스킬**: `/autoqa` 등 4종 사용법
-   - **운영 규약 요약**: 스트림 2개, 상태 접미사 4종과 사람의 대응(-manual은 직접
-     처리, -agent-failed는 실패 기록 읽고 보강 후 접미사 제거, 정체 시 개입),
-     `CONTEXT.md`·`docs/autoqafix-design.md` 링크
-   - **알려진 정리 작업**: `smarthome-project/autofix.bat`(린트 스크립트)은 이름
-     충돌이므로 `lint.bat`으로 개명 권고 (해당 repo에서 사람이 수행)
-2. 명령은 전부 복사-실행 가능한 코드블록으로
+1. `.claude/skills/autoqafix/autoqafix-doctor.py` (PEP-723) + repo 루트 런처
+   `autoqafix-doctor.{sh,ps1,bat}`
+2. 검사 항목(각각 `OK <항목>` 또는 `FAIL <항목>` + `[원인]`/`[조치]` 출력):
+   ① preflight("qa")·preflight("fix") 전 항목, ② `AUTOQAFIX_WRAPPERS`의 래퍼들이
+   스킬 폴더 `wrappers/` 또는 PATH에 존재, ③ 후보 래퍼들의 usage 스크립트
+   (`usage-<래퍼명>.py`)가 `uv -q run`으로 기동되고 유효 JSON을
+   내는가, ④ select-llm이 후보 래퍼명 또는 `none`을 내는가,
+   ⑤ `deploy.{sh,ps1,bat}` 또는 `deploy-to-env.{sh,ps1,bat}`가 대상 repo에
+   존재하는가 — 이 파일은 대상 repo가 준비하는 것이며 스킬은 절대 생성하지
+   않는다(없으면 FAIL이 아닌 `WARN — deploy 스크립트 없음, 파일이 없으므로
+   배포는 생략됩니다` 출력), ⑥ 뮤텍스 잠금이 현재
+   잡혀 있지 않은가, ⑦ `~/.claude/skills/{autotdd,tdd2,acpd,tdd}` 존재
+3. `--ping` 플래그: 후보 래퍼의 `ping-<래퍼명>`도 실행(크레딧 소모 경고를
+   먼저 출력하고 진행). 기본은 실행하지 않음
+4. exit code = FAIL 항목 수 (WARN은 세지 않음)
 
 ## 승인 기준
 
-- [ ] 문서가 존재하고 위 7개 섹션 제목이 모두 있다
-- [ ] 문서 안의 모든 파일 경로가 실재한다 (스크립트로 추출·검사)
-- [ ] "시작 위치" 설정 설명이 포함된다
+- [ ] 완전한 픽스처 repo에서 FAIL 0, exit 0
+- [ ] `logs/` 삭제 → FAIL ≥ 1, exit ≥ 1, 해당 항목에 `[조치]`가 있다
+- [ ] deploy 스크립트(`deploy.sh`/`deploy-to-env.sh`) 없는 픽스처에서 WARN은
+      나오되 exit에 반영 안 됨
+- [ ] `--ping` + PING_WRAPPER=fake로 ping 결과가 출력에 포함된다
 
 ## 검증
 
-`regression-tests/verify-issue-20.sh` 작성: 섹션 존재 + 경로 실재 검사.
+`regression-tests/verify-issue-20.sh` 작성: 위 전부.

@@ -1,27 +1,41 @@
-# issue-16: 단일 롤 루프 3종 (autoqa-loop / autofix-loop / autodev-loop)
+# issue-16: autofix/autodev 디스패치 — 실행, 성공 판정, 실패 처리
+agent-tier: paid-only
 
 ## 배경
 
-합성이 아닌 단일 롤을 주기 실행하는 얇은 루프. autoqafix-loop(issue-15)의
-페이즈 로직을 재사용한다.
+issue-15의 `dispatch` 스텁을 실구현으로 교체한다. 명세:
+`docs/autoqafix-design.md`의 "autofix / autodev" 2·4번과 CONTEXT.md "실패 기록".
 
 ## 요구사항
 
-1. `.claude/skills/autoqafix/role-loop.py` (PEP-723) 하나로 구현: `--role qa|fix|dev` 인자.
-   부팅 대기 없음(합성 루프 전용). 최소 간격(AUTOQAFIX_INTERVAL, 기본 6시간)
-   유지하며 해당 1회형을 반복. 테스트 주입점 `AUTOQAFIX_ROLE_CMD`
-2. repo 루트 런처 9종: `autoqa-loop.{sh,ps1,bat}`, `autofix-loop.{sh,ps1,bat}`,
-   `autodev-loop.{sh,ps1,bat}` — 각각 `role-loop.py --role <r>` 호출,
-   issue-13 런처 패턴(uv 검사, `.bat` pause)
-3. `--interval <초>` 인자 지원
+1. `dispatch(item, wrapper)` 실구현: worktree에서
+   `<래퍼> -p "/autotdd <stream>-<N> worktree"` 실행, 타임아웃
+   `AUTOQAFIX_IMPL_TIMEOUT`(기본 10800초). `run_with_timeout`(issue-10)을 사용해
+   타임아웃 시 프로세스 트리 전체를 종료한다
+2. 성공 판정: worktree에서 pull 후 `issues/<stream>-<N>.md`가 사라지고
+   `issues/archive/**/<stream>-<N>.md`가 존재하면 성공
+3. 실패/타임아웃: worktree를 `git -C <wt> reset --hard origin/main`으로 복구,
+   `git worktree prune`. 항목 파일에 `## agent 실패 기록` 섹션(없으면 생성) +
+   `- <ISO8601> <래퍼>: <exit code 또는 timeout, stderr 마지막 3줄>` 추가 →
+   `-agent-failed`로 `git mv` → 그 파일만 commit·push → 다음 항목.
+   승급 없음, 정체는 사람 개입
+4. `FIXED=<n>` = 성공(archive 이동) 건수 (issue-15의 고정 `FIXED=0`을 실계수로
+   대체)
 
 ## 승인 기준
 
-- [ ] `AUTOQAFIX_ROLE_CMD="echo ran"` + `--interval 1`로 `autoqa-loop.sh`
-      백그라운드 실행, 3초 후 kill → `ran`이 2회 이상 출력됨
-- [ ] interval 도달 전에는 재실행되지 않는다 (`--interval 3600`으로 3초 내 1회만)
-- [ ] 런처 9종 존재, `.sh` 3종 `bash -n` 통과
+픽스처 + fake-wrapper로:
+
+- [ ] `agent-tier: local-ok` 항목 + FAKE_MODE=archive → 성공 판정, `FIXED=1`
+- [ ] FAKE_MODE=fail → 원격에 `<stream>-N-agent-failed.md`가 존재하고 그 안에
+      `## agent 실패 기록` 섹션과 래퍼명이 있다. `FIXED=0`
+- [ ] FAKE_MODE=hang + AUTOQAFIX_IMPL_TIMEOUT=3 → 3초 부근에 실패 처리(위와
+      동일 경로), 프로세스 잔류 없음
+- [ ] 실패 항목 뒤에도 다음 항목 처리가 계속된다 (fail 항목 1 + archive 항목 1
+      → `FIXED=1`, 원격에 `-agent-failed` 1개)
+- [ ] 사람 main tree(픽스처의 work/)의 미커밋 더미 파일이 전 과정에서 불변
 
 ## 검증
 
-`regression-tests/verify-issue-16.sh` 작성: 위 전부 (총 15초 이내).
+`regression-tests/verify-issue-16.sh` 작성: 위 전부. 실 autotdd 호출 금지
+(fake-wrapper의 archive 모드가 성공을 모사).

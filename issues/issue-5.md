@@ -1,28 +1,36 @@
-# issue-5: qwencli 래퍼 3종
+# issue-5: 신규 래퍼 3종 — codexcli / antigravitycli / deepseekcli
+agent-tier: local-ok
 
 ## 배경
 
-로컬 무료 LLM용 래퍼. 내부에서 `qwen`(qwen.exe)을 호출하므로 자기호출 충돌을 피해
-이름은 `qwencli`다(`qwen.{bat,ps1,sh}` 금지 — CONTEXT.md "LLM 래퍼" 참조).
+issue-4에서 분리된 신규 래퍼 3종. 인자 규약은 issue-4의 claudecli/minimaxcli와
+동일하다(CONTEXT.md "LLM 래퍼"). 대응 CLI(`codex`/`antigravity`/`deepseek`)는 이
+개발 환경에 설치돼 있지 않을 수 있으므로 **`--help` 조사를 요구하지 않는다** —
+아래 명세의 단순 pass-through로 구현하고, 플래그가 미검증임을 주석으로 남긴다.
 
 ## 요구사항
 
-1. `.claude/skills/autoqafix/wrappers/`에 `qwencli.sh`, `qwencli.ps1`,
-   `qwencli.bat` 작성
-2. 동작: 받은 인자를 그대로 `qwen`에 전달 (`qwen -p PROMPT` 형태 지원).
-   `qwen`은 PATH에서 찾는다(하드코딩 금지)
-3. claudecli/minimaxcli와 동일한 인자 규약: 첫 인자가 존재하는 파일이면 내용을 stdin으로
-   `qwen -p`에 파이프
-4. `qwen`이 PATH에 없으면 `[원인] qwen CLI가 PATH에 없음` + `[조치] qwen 설치 또는
-   PATH 추가` 출력 후 exit 127
+1. `.claude/skills/autoqafix/wrappers/`에 `codexcli.{sh,ps1,bat}`,
+   `antigravitycli.{sh,ps1,bat}`, `deepseekcli.{sh,ps1,bat}` 작성 (9개 파일)
+2. 동작: 받은 인자를 그대로 PATH의 대응 CLI(`codex`/`antigravity`/`deepseek`)에
+   전달 (`-p PROMPT` 형태 지원). 절대경로 하드코딩 금지
+3. issue-4와 동일한 인자 규약: 첫 인자가 존재하는 파일이면 그 내용을 stdin으로
+   `<CLI> -p`에 파이프, 아니면 인자 전체를 그대로 전달
+4. 대응 CLI가 PATH에 없으면 `[원인] <CLI>가 PATH에 없음` + `[조치] <CLI> 설치
+   또는 PATH 추가` 출력 후 exit 127
+5. 각 래퍼 상단 주석: "플래그는 미검증 — 실 CLI 설치 환경에서 `--help`로 확인 후
+   조정할 것"
 
 ## 승인 기준
 
-- [ ] PATH 앞에 `fake-qwen.sh`를 `qwen`으로 심고 `wrappers/qwencli.sh -p "hi"` →
+- [ ] `regression-tests/lib/fake-claude.sh`를 `codex`/`antigravity`/`deepseek`
+      이름으로 PATH 앞에 복사해 두고 각 `.sh` 래퍼를 `-p "hi"`로 실행 →
       `FAKE_LOG`에 `-p hi`가 기록되고 exit 0
-- [ ] `qwen`이 PATH에 없는 환경에서 exit 127 + `[원인]`/`[조치]` 두 줄 출력
-- [ ] `bash -n qwencli.sh` 통과, `.bat`/`.ps1`은 존재 + `qwen` 호출 grep 확인
+- [ ] 파일 인자 모드: 임시 파일 경로를 주면 fake가 stdin으로 그 내용을 받는다
+- [ ] 대응 CLI가 PATH에 없는 환경에서 exit 127 + `[원인]`/`[조치]` 두 줄 출력
+- [ ] `.sh` 3종 `bash -n` 통과, `.ps1`/`.bat`은 존재 + 대응 CLI명 grep 확인
 
 ## 검증
 
-`regression-tests/verify-issue-5.sh` 작성: 승인 기준 자동화 (fake-qwen 사용).
+`regression-tests/verify-issue-5.sh` 작성: 승인 기준 자동화 (fake CLI 사용,
+크레딧 사용 금지).

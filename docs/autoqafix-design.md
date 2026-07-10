@@ -1,6 +1,6 @@
 # autoqafix 설계 명세 (공유 문서)
 
-issue-3 ~ issue-20의 공통 설계 근거. 각 이슈는 이 문서와 `CONTEXT.md`(용어)를 따른다.
+issue-3 ~ issue-23의 공통 설계 근거. 각 이슈는 이 문서와 `CONTEXT.md`(용어)를 따른다.
 용어가 충돌하면 `CONTEXT.md`가 이긴다.
 
 ## 목적
