@@ -34,3 +34,24 @@ issue-4에서 분리된 신규 래퍼 3종. 인자 규약은 issue-4의 claudecl
 
 `regression-tests/verify-issue-5.sh` 작성: 승인 기준 자동화 (fake CLI 사용,
 크레딧 사용 금지).
+
+## 구현 결과
+
+**구현 완료 일시**: 2026-07-10T17:50:28-0400
+
+**변경 파일**:
+- `.claude/skills/autoqafix/wrappers/codexcli.{sh,ps1,bat}` (신규)
+- `.claude/skills/autoqafix/wrappers/antigravitycli.{sh,ps1,bat}` (신규)
+- `.claude/skills/autoqafix/wrappers/deepseekcli.{sh,ps1,bat}` (신규)
+- `regression-tests/verify-issue-5.sh` (신규)
+
+**계획 대비 편차**: 없음. 세 래퍼 모두 issue-4와 동일한 인자 규약(첫 인자가
+파일이면 stdin 파이프, 아니면 그대로 전달)을 공유하며, 대응 CLI가 PATH에
+없으면 `[원인]`/`[조치]` 출력 후 exit 127. 명세대로 `--help` 조사는 하지
+않았고 각 파일 상단에 "플래그 미검증" 주석을 남겼다.
+
+**검증 결과**: `regression-tests/verify-issue-5.sh` 단독 실행 exit 0(승인
+기준 전부 PASS). `run-regression-tests`로 issue-3+4+5 전체 실행 결과
+PASS=3 FAIL=0. Python 프로젝트가 아니므로(`pyproject.toml` 없음)
+ruff/pyright/pytest 단계는 해당 없음. `.ps1`/`.bat`은 실 CLI와 PowerShell이
+모두 이 환경에 없어 실행 검증 불가 — 존재 확인과 CLI명 grep으로만 확인함.
