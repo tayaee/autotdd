@@ -42,3 +42,30 @@ agent-tier: paid-only
 
 `regression-tests/verify-issue-10.sh` 작성: `--selftest` 실행 + 픽스처 repo에서의
 preflight/lock 시나리오.
+
+## 구현 결과
+
+**구현 완료 일시**: 2026-07-10T18:21:02-0400
+
+**변경 파일**:
+- `.claude/skills/autoqafix/autoqafix_core.py` (신규)
+- `regression-tests/verify-issue-10.sh` (신규)
+
+**계획 대비 편차**: `preflight(role, repo)`의 ① 검사("cwd가 git repo
+루트")는 이슈 명세가 "cwd"라고 썼지만, 함수가 `repo` 매개변수를 받으므로
+실제로는 `git -C <repo> rev-parse --show-toplevel`이 `repo` 자체와
+일치하는지를 검사하도록 구현했다(프로세스의 실제 os.getcwd()가 아니라) —
+호출자가 검사 대상 디렉토리를 매개변수로 넘기는 것과 일관되고, 테스트도
+디렉토리를 바꿔가며 결정적으로 검증할 수 있어 이 해석을 택했다. 검증
+스크립트는 `regression-tests/lib/`의 fixture 생성기(issue-3)를 재사용하고,
+`autoqafix_core.py`를 `PYTHONPATH`로 import하는 별도 Python 하네스로
+`preflight`/`acquire_lock`/`release_lock`/`run_with_timeout`을 직접
+호출해 반환값을 정밀 검증했다(CLI exit code만으로는 어려운 수준의 검증).
+
+**검증 결과**: `regression-tests/verify-issue-10.sh` 단독 실행 exit
+0(승인 기준 5개 시나리오 전부 PASS: fixture repo qa 통과/logs 제거 후
+위반/비-git 디렉토리 위반/잠금 획득-거부-해제-재획득/5시간 전 잠금 회수/
+`run_with_timeout` 타임아웃/`--selftest`). `--selftest` 자체도 `uv -q run`
+으로 독립 실행해 exit 0 확인. `run-regression-tests`로 issue-3~10 전체
+실행 결과 PASS=8 FAIL=0. Python 프로젝트가 아니므로(저장소 루트에
+`pyproject.toml` 없음) ruff/pyright/pytest 단계는 해당 없음.
