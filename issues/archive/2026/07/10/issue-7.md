@@ -34,3 +34,26 @@ agent-tier: local-ok
 
 `regression-tests/verify-issue-7.sh` 작성: 위 시나리오를 fake-wrapper로 자동화.
 실 래퍼 호출(크레딧) 금지.
+
+## 구현 결과
+
+**구현 완료 일시**: 2026-07-10T18:03:13-0400
+
+**변경 파일**:
+- `.claude/skills/autoqafix/wrappers/ping-{claudecli,minimaxcli,qwencli,codexcli,antigravitycli,deepseekcli}.{sh,ps1,bat}` (신규, 18개)
+- `regression-tests/verify-issue-7.sh` (신규)
+
+**계획 대비 편차**: `.bat`은 배치의 프로세스 타임아웃/kill 기능 부재로
+자체 구현 대신 `ping-<name>.ps1`로 위임하는 얇은 디스패처로 작성했다
+(`aacp.bat` → `aacp.ps1` 위임과 동일한 패턴, 기존 코드베이스 컨벤션 재사용).
+`.ps1`은 `Start-Job`/`Wait-Job`으로 타임아웃을 구현했다(PowerShell 표준
+패턴). 승인 기준의 시나리오 4개는 모두 `ping-claudecli.sh`로 대표 검증했고,
+나머지 5개 래퍼는 `PING_WRAPPER` 주입으로 OK 경로만 추가 확인했다(동일
+템플릿에서 이름만 다르므로 나머지 3개 실패 시나리오는 중복 검증으로 판단해
+생략).
+
+**검증 결과**: `regression-tests/verify-issue-7.sh` 단독 실행 exit 0(승인
+기준 전부 PASS, 6개 래퍼 모두 OK 경로 확인). `run-regression-tests`로
+issue-3+4+5+6+7 전체 실행 결과 PASS=5 FAIL=0. Python 프로젝트가 아니므로
+(`pyproject.toml` 없음) ruff/pyright/pytest 단계는 해당 없음. `.ps1`/`.bat`은
+이 환경에 PowerShell이 없어 실행 검증 불가 — 존재 확인만 함(주석에도 명시).
