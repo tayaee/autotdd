@@ -27,3 +27,24 @@ agent-tier: local-ok
 ## 검증
 
 `regression-tests/verify-issue-6.sh` 작성: 승인 기준 자동화 (fake-qwen 사용).
+
+## 구현 결과
+
+**구현 완료 일시**: 2026-07-10T17:54:10-0400
+
+**변경 파일**:
+- `.claude/skills/autoqafix/wrappers/qwencli.{sh,ps1,bat}` (신규)
+- `regression-tests/lib/fake-qwen.sh` (수정: env `FAKE_STDIN_FILE` 설정 시
+  stdin을 파일로 캡처하는 옵션 추가 — 기본 동작은 그대로라 issue-3 회귀 없음.
+  issue-4에서 fake-claude.sh에 추가한 것과 동일한 패턴)
+- `regression-tests/verify-issue-6.sh` (신규)
+
+**계획 대비 편차**: 요구사항 3(파일 인자 → stdin 파이프)은 승인 기준 목록에
+별도 항목으로 없었지만 명시적 요구사항이라 구현하고 회귀 테스트에도 포함시켰다.
+
+**검증 결과**: `regression-tests/verify-issue-6.sh` 단독 실행 exit 0(승인
+기준 전부 PASS). `run-regression-tests`로 issue-3+4+5+6 전체 실행 결과
+PASS=4 FAIL=0. Python 프로젝트가 아니므로(`pyproject.toml` 없음)
+ruff/pyright/pytest 단계는 해당 없음. `.ps1`/`.bat`은 실 `qwen` CLI와
+PowerShell이 모두 이 환경에 없어 실행 검증 불가 — 존재 확인과 `qwen` 문자열
+grep으로만 확인함.
