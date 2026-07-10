@@ -1,5 +1,6 @@
 # issue-15: autofix/autodev 엔진 골격 — worktree, 항목 열거, tier 처리
 agent-tier: paid-only
+**구현 완료 일시**: 2026-07-10T19:05Z
 
 ## 배경
 
@@ -47,3 +48,28 @@ issue-17이 만든다. 명세: `docs/autoqafix-design.md`의 "autofix / autodev"
 ## 검증
 
 `regression-tests/verify-issue-15.sh` 작성: 위 전부. 실 LLM 호출 금지.
+
+## 구현 결과
+
+- 변경 파일:
+  - `.claude/skills/autoqafix/autofix.py` (신규) — PEP-723 엔진 스켈레톤
+  - `regression-tests/lib/make-fixture-repo-issue-15.sh` (신규) — 접미사/예약중
+    항목 + 사람의 main tree 미커밋 더미 파일까지 갖춘 픽스처
+  - `regression-tests/verify-issue-15.sh` (신규) — 시나리오 A(paid=claudecli,
+    stamp+rename+dispatch) / 시나리오 B(local=qwencli, paid-only 스킵)
+- 설계 위배:
+  - `git worktree add <path> main`은 같은 브랜치를 두 워크트리에서 체크아웃할 수
+    없어 실패한다 (`fatal: 'main' is already used by worktree ...`). 사람
+    main tree가 `main`을 잡고 있는 한 언제나. `--detach`를 추가해
+    `git worktree add --detach <path> main`으로 우회 — 의미상 "main 추적"을
+    그대로 만족하고, detached HEAD는 이후 commit + push 대상만 명시하면 됨
+  - 같은 이유로 `git -C <path> pull --rebase`는 detached HEAD의 업스트림
+    트래킹이 없어 실패하므로 `pull --rebase origin main` (원격/브랜치 명시)
+  - 같은 이유로 `git push` (인자 없음)는 detached HEAD에서 "fatal: You are
+    not currently on a branch"로 실패하므로 모든 push를 `push origin
+    HEAD:main`으로 통일. 이 과정에서 `_git_or_die` 래퍼를 추가해
+    `core._git`의 무성 실패(리턴코드 무시)를 차단
+- 검증 결과:
+  - `verify-issue-15.sh`: 22/22 PASS (시나리오 A 14 + 시나리오 B 7 + 헬퍼 1)
+  - 회귀: `verify-issue-{3..14}.sh` 모두 PASS 유지
+  - pyright (`.` 전체), `python -m compileall .` 무오류
