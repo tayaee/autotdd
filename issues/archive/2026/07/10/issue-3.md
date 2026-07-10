@@ -44,3 +44,27 @@ issue-4 ~ issue-20의 모든 검증은 실제 LLM 크레딧을 쓰지 않아야 
 
 `regression-tests/verify-issue-3.sh` 작성: 위 승인 기준 4개를 그대로 자동화.
 임시 디렉토리는 trap으로 정리. 공용 헬퍼가 필요하면 `regression-tests/lib/`에 둔다.
+
+## 구현 결과
+
+**구현 완료 일시**: 2026-07-10T17:39:03-0400
+
+**변경 파일**:
+- `regression-tests/lib/make-fixture-repo.sh` (신규)
+- `regression-tests/lib/fake-wrapper.sh` (신규)
+- `regression-tests/lib/fake-claude.sh` (신규)
+- `regression-tests/lib/fake-qwen.sh` (신규)
+- `regression-tests/verify-issue-3.sh` (신규)
+
+**계획 대비 편차**: 없음. 단, `fake-wrapper.sh`의 `archive` 모드에서
+`git push`가 로컬 브랜치와 원격 브랜치 이름 불일치로 거부되는 문제가 있어
+`make-fixture-repo.sh`가 초기 커밋 후 로컬 브랜치를 `main`으로 명명(`git
+branch -M main`)하도록 했다. 승인 기준의 archive 대상 경로
+`issues/archive/2026/07/10/`는 `date +%Y/%m/%d`로 동적 계산했다(픽스처 로그의
+날짜, 그리고 오늘 날짜와 실제로 일치).
+
+**검증 결과**: `regression-tests/verify-issue-3.sh` 단독 실행 exit 0(승인
+기준 4개 모두 PASS). 이 이슈가 저장소의 첫 회귀 스크립트이므로
+`run-regression-tests` 전체 스위트 결과는 이 스크립트 하나로 구성됨 — 통과.
+Python 프로젝트가 아니므로(`pyproject.toml` 없음) ruff/pyright/pytest 단계는
+해당 없음.
