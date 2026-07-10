@@ -16,16 +16,19 @@ skill does the rest.
 
 ## A naming note before anything else
 
-This skill's own script is called `deploy.sh` (`.ps1`/`.bat` too), and
-that script's own step 7 calls a **different** `deploy.sh` — the
-*target repo's* per-environment deploy entry point, which step 3
-generates if the repo doesn't already have one. They live in different
-places:
+`acpd` is a sequence of **five** steps: **A**rchive the issue file,
+git **A**dd -u, **C**ommit, **P**ush, **D**eploy. This skill's own
+script only implements the first four — it's called `aacp.sh`
+(`.ps1`/`.bat` too), named after exactly what it does. The fifth step,
+Deploy, is **not** this skill's logic: it's each target repo's own
+responsibility to provide a deploy entry point. `aacp.sh`'s last step
+just looks for one and calls it — it never generates or scaffolds one.
+They live in different places:
 
 | | Path | What it is |
 |---|---|---|
-| This skill's script | `.claude/skills/acpd/deploy.{sh,ps1,bat}` | What you invoke to run the whole archive→commit→push→deploy pipeline |
-| Target repo's script | `<target-repo>/deploy.{sh,ps1,bat}` | The project's own `--env <env>` deploy hook, called by the skill's script at the very end |
+| This skill's script | `.claude/skills/acpd/aacp.{sh,ps1,bat}` | What you invoke to run the whole archive→add→commit→push→deploy pipeline |
+| Target repo's script (project-provided) | `<target-repo>/deploy.{sh,ps1,bat}` or `<target-repo>/deploy-to-env.{sh,ps1,bat}` | The project's own `--env <env>` deploy hook, called by the skill's script at the very end, if it exists |
 
 Everywhere below, "this script" / "the acpd script" means the former.
 
@@ -34,23 +37,23 @@ Everywhere below, "this script" / "the acpd script" means the former.
 ### Explicit issue number — no prompts
 
 ```bash
-bash .claude/skills/acpd/deploy.sh <issue-number> <commit-summary...>
+bash .claude/skills/acpd/aacp.sh <issue-number> <commit-summary...>
 ```
 
 ```bash
-bash .claude/skills/acpd/deploy.sh 42 "KP115 전력 캐시 만료 버그 수정"
+bash .claude/skills/acpd/aacp.sh 42 "KP115 전력 캐시 만료 버그 수정"
 ```
 
-On a Windows host without bash/WSL, use `deploy.ps1` (native
-PowerShell port) or `deploy.bat` (thin dispatcher to `deploy.ps1`) —
-same arguments, same behavior. `deploy.sh` is the canonical,
+On a Windows host without bash/WSL, use `aacp.ps1` (native
+PowerShell port) or `aacp.bat` (thin dispatcher to `aacp.ps1`) —
+same arguments, same behavior. `aacp.sh` is the canonical,
 most-exercised implementation; the other two mirror it. See Gotchas.
 
 ### No issue number — find what's pending, then ask
 
 When the user says `/acpd` with no number:
 
-1. Run `bash .claude/skills/acpd/deploy.sh --pending` to list issue
+1. Run `bash .claude/skills/acpd/aacp.sh --pending` to list issue
    numbers whose `## 구현 결과` is already filled in (i.e. `/tdd2`
    finished them) but haven't been archived/deployed yet.
 2. If empty: report there's nothing pending. Stop.
@@ -71,18 +74,19 @@ itself.
    before any git mutation.
 1. Stages `issues/issue-<#>.md` (its own edits, e.g. the `## 구현 결과` section).
 2. Archives it: `git mv` to `issues/archive/YYYY/MM/DD/issue-<#>.md`.
-3. For each of the **target repo's** `deploy.sh`, `deploy.bat`,
-   `deploy.ps1`: if missing, generates a placeholder/dispatcher (see
-   Gotchas) and stages it. Only the same-platform one is actually
-   invoked by this script at step 7 (`deploy.sh` invokes the target's
-   `deploy.sh`, `deploy.ps1` invokes the target's `deploy.ps1`) — the
-   others are scaffolded for other hosts (several of these projects
-   deploy to a Windows box over ssh) but aren't run automatically.
-4. `git add -u` — stages the rest of the already-tracked changes. Never touches untracked files.
-5. Commits code + archiving as **one commit**, message `issue-<#>: <summary>` with the `Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>` trailer appended automatically — don't add it yourself.
-6. `git push`.
-7. Runs the target repo's own same-platform `deploy.{sh,ps1} --env dev`
-   — **dev only, always**. This skill never touches qa/prod.
+3. `git add -u` — stages the rest of the already-tracked changes. Never touches untracked files.
+4. Commits code + archiving as **one commit**, message `issue-<#>: <summary>` with the `Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>` trailer appended automatically — don't add it yourself.
+5. `git push`.
+6. Deploy — **dev only, always**; this skill never touches qa/prod, and
+   never generates or scaffolds a deploy script. It just looks for one
+   in the target repo, same-platform, in this order, and runs the
+   first one it finds with `--env dev`:
+   - `deploy.{sh,ps1,bat}` — the project's primary deploy entry point.
+   - else `deploy-to-env.{sh,ps1,bat}` — an alternate name some
+     projects use.
+   - else neither exists: deploy is skipped (not a failure) with a
+     note telling you to add one. Setting up that script is on the
+     **target project**, not this skill — see Gotchas.
 
 Fails fast (`set -e`, exit 1) with no git side effects if
 `issues/issue-<#>.md` doesn't exist, or if any step-0 check fails —
@@ -98,7 +102,7 @@ bundled default in `defaults/run-<name>.sh` runs instead — **not**
 copied into the project, just invoked from the skill directory with
 CWD already set to the repo root. `.bat`/`.ps1` siblings exist in
 `defaults/` for a human on Windows running the equivalent by hand, and
-`deploy.ps1` resolves `.ps1` project-or-default the same way — but
+`aacp.ps1` resolves `.ps1` project-or-default the same way — but
 each of `acpd`'s own three entry scripts only ever calls its own
 platform's flavor.
 
@@ -111,7 +115,7 @@ tree changed after `/tdd2` finished.
 path restriction (slower, whole project) — same fast/thorough split as
 `run-unit-tests` vs a project's own coverage script.
 
-Verified end-to-end (via `deploy.sh`) against a real `uv`-managed
+Verified end-to-end (via `aacp.sh`) against a real `uv`-managed
 Python project: all five defaults ran for real (ruff, pyright, and
 pytest actually executed, not mocked) and the gate correctly aborted
 with zero git side effects on a real pytest failure; a project with
@@ -130,34 +134,27 @@ under `issues/archive/`, a different path) for that signal.
 
 ## Gotchas
 
-- **`deploy.ps1` and `deploy.bat` were not run in this environment —
-  no PowerShell available here.** `deploy.ps1` is a careful,
-  line-by-line manual port of the exercised `deploy.sh` (same steps,
-  same guarantees) but hasn't been executed for real; verify it on an
-  actual Windows/PowerShell host before relying on it for anything
-  important. `deploy.bat` is intentionally thin — it just locates
-  `pwsh` (preferred) or `powershell` on `PATH` and forwards to
-  `deploy.ps1`, rather than reimplementing ~200 lines of archive/
-  commit/push/gate logic a third time in raw batch. It does **not**
-  pass `-ExecutionPolicy Bypass`; if your system's execution policy
-  blocks local scripts, set it yourself
+- **`aacp.ps1` and `aacp.bat` were not run in this environment — no
+  PowerShell available here.** `aacp.ps1` is a careful, line-by-line
+  manual port of the exercised `aacp.sh` (same steps, same guarantees)
+  but hasn't been executed for real; verify it on an actual
+  Windows/PowerShell host before relying on it for anything important.
+  `aacp.bat` is intentionally thin — it just locates `pwsh` (preferred)
+  or `powershell` on `PATH` and forwards to `aacp.ps1`, rather than
+  reimplementing ~150 lines of archive/commit/push/gate logic a third
+  time in raw batch. It does **not** pass `-ExecutionPolicy Bypass`; if
+  your system's execution policy blocks local scripts, set it yourself
   (`Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`) or use
-  `deploy.sh` under WSL/git-bash instead.
-- **The target repo's `deploy.sh`/`deploy.bat`/`deploy.ps1` are a
-  per-project convention, not guaranteed to exist.** Older projects
-  have `deploy-to-dev.sh` / `deploy-to-qa.sh` instead (or Windows
-  equivalents). Each of the three is checked and generated
-  **independently** — a repo can end up with only the ones it was
-  missing; existing files (any content) are never touched. Each
-  placeholder dispatches to a legacy `deploy-to-<env>.{sh,bat,ps1}`
-  when one exists, or prints a `TODO` and exits 0 otherwise (so a
-  project with no deploy automation yet doesn't fail the whole merge —
-  it just doesn't deploy). Verified via `deploy.sh`: a repo with only
-  `deploy-to-dev.sh` deploys correctly through the generated
-  `deploy.sh` dispatcher; a repo with a pre-existing custom
-  `deploy.bat` keeps it untouched while still generating the missing
-  `deploy.sh`/`deploy.ps1`; a repo with none of the three gets stubs
-  with clear TODO messages in all of them.
+  `aacp.sh` under WSL/git-bash instead.
+- **The target repo's deploy script is a per-project convention this
+  skill never creates.** Deploy is step 5 of `acpd` in name only —
+  it's the one step this skill deliberately doesn't implement. Setting
+  up `deploy.{sh,ps1,bat}` (or `deploy-to-env.{sh,ps1,bat}`) in the
+  target repo, and making it accept `--env dev`, is the target
+  project's job (see the Quickstart in the `autotdd` repo's README).
+  If neither exists when `aacp` reaches step 6, it prints a note and
+  exits 0 — a project with no deploy automation yet doesn't fail the
+  whole merge, it just doesn't deploy.
 - **Commit message trailer is baked into the script.** Don't pass a
   message that already includes `Co-Authored-By` — you'll get it
   twice.
