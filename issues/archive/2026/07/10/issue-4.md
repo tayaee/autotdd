@@ -40,3 +40,30 @@ agent-tier: paid-only
 
 `regression-tests/verify-issue-4.sh` 작성: 승인 기준 전부 자동화 (fake CLI 사용,
 크레딧 사용 금지).
+
+## 구현 결과
+
+**구현 완료 일시**: 2026-07-10T17:46:43-0400
+
+**변경 파일**:
+- `.claude/skills/autoqafix/wrappers/claudecli.{sh,ps1,bat}` (신규)
+- `.claude/skills/autoqafix/wrappers/minimaxcli.{sh,ps1,bat}` (신규)
+- `regression-tests/lib/fake-claude.sh` (수정: env `FAKE_STDIN_FILE` 설정 시
+  stdin을 파일로 캡처하는 옵션 추가 — 기본 동작은 그대로라 issue-3 회귀 없음)
+- `regression-tests/verify-issue-4.sh` (신규)
+
+**계획 대비 편차**: `/rosenas/data/util/sonnet.bat`, `minimax.bat` →
+`minimax-claude.bat` → `minimax3-claude.bat` 체인에 실제 접근 가능해 그대로
+참고해 이식함. 두 참고 구현이 서로 다른 권한 플래그를 쓰고 있어(`sonnet.bat`은
+`--permission-mode=bypassPermissions`, `minimax3-claude.bat`은
+`--dangerously-skip-permissions`) 이슈 본문의 승인 기준에 맞춰 각각 원본
+그대로 유지했다(통일하지 않음). `NODE_EXTRA_CA_CERTS` "이미 설정돼 있으면
+보존" 요구사항은 원본 `minimax3-claude.bat`(항상 덮어씀)과 다르게 구현했다 —
+요구사항 5가 명시적으로 우선.
+
+**검증 결과**: `regression-tests/verify-issue-4.sh` 단독 실행 exit 0(승인
+기준 전부 PASS). `run-regression-tests`로 issue-3+issue-4 회귀 스위트 전체
+실행 결과 PASS=2 FAIL=0. Python 프로젝트가 아니므로(`pyproject.toml` 없음)
+ruff/pyright/pytest 단계는 해당 없음. `.ps1`은 WSL 환경에 PowerShell이 없어
+실행 검증 불가 — 존재 확인과 핵심 문자열(`--model`, `bypassPermissions`)
+grep으로만 확인함(스크립트 상단 주석에도 명시).
