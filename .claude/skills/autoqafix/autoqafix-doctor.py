@@ -25,7 +25,6 @@ import shutil
 import sys
 from pathlib import Path
 
-import autofix
 import autoqafix_core as core
 
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -104,6 +103,7 @@ def check_usage_scripts(d: Doctor, names: list[str]) -> None:
         except ValueError:
             d.fail(item, "stdout이 유효 JSON이 아님", f"uv -q run {script} 출력 확인")
             continue
+        os.environ[f"AUTOQAFIX_USAGE_DATA_{name.upper()}"] = out.strip()
         d.ok(item)
 
 
@@ -261,7 +261,7 @@ def main() -> int:
     repo = Path(args.repo).resolve()
 
     spec = os.environ.get("AUTOQAFIX_WRAPPERS") or WRAPPERS_DEFAULT
-    names = list(autofix.parse_wrapper_spec(spec))
+    names = list(core.parse_wrapper_spec(spec))
     wrapper_dir = Path(os.environ.get("AUTOQAFIX_WRAPPER_DIR", str(WRAPPER_DEFAULT_DIR)))
 
     d = Doctor()

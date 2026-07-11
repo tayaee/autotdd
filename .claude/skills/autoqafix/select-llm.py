@@ -55,6 +55,13 @@ def usage_command(name: str) -> list[str] | None:
 
 
 def fetch_usage(name: str) -> dict | None:
+    env_data = os.environ.get(f"AUTOQAFIX_USAGE_DATA_{name.upper()}")
+    if env_data:
+        try:
+            return json.loads(env_data)
+        except Exception as e:
+            print(f"[경고] {name}: 주입된 usage 데이터 파싱 실패 ({e}) — 쿼리 시도", file=sys.stderr)
+
     cmd = usage_command(name)
     if cmd is None:
         print(f"[경고] {name}: usage 스크립트 없음 — 후보 제외", file=sys.stderr)

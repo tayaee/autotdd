@@ -76,19 +76,7 @@ def ensure_worktree(repo: Path, worktree: Path) -> None:
     )
 
 
-def parse_wrapper_spec(spec: str) -> dict[str, str]:
-    """`name:tier,...` → {name: tier}."""
-    out: dict[str, str] = {}
-    for entry in spec.split(","):
-        entry = entry.strip()
-        if not entry:
-            continue
-        name, _, tier = entry.partition(":")
-        name = name.strip()
-        tier = tier.strip()
-        if name and tier:
-            out[name] = tier
-    return out
+from autoqafix_core import parse_wrapper_spec
 
 
 def enumerate_items(worktree: Path, stream: str) -> list[Path]:

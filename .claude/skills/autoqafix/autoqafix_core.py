@@ -30,6 +30,21 @@ LOCK_REL_PATH = ".git/autoqafix.lock"
 DEFAULT_LOCK_STALE_SEC = 14400  # 4 hours
 
 
+def parse_wrapper_spec(spec: str) -> dict[str, str]:
+    """`name:tier,...` → {name: tier}."""
+    out: dict[str, str] = {}
+    for entry in spec.split(","):
+        entry = entry.strip()
+        if not entry:
+            continue
+        name, _, tier = entry.partition(":")
+        name = name.strip()
+        tier = tier.strip()
+        if name and tier:
+            out[name] = tier
+    return out
+
+
 def _msg(reason: str, action: str) -> str:
     return f"[원인] {reason}\n[조치] {action}"
 
