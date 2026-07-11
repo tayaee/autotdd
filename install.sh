@@ -8,7 +8,8 @@
 #   .claude/skills/autoqafix  — 엔진 폴더 + 트리거 /autoqafix 겸용
 #
 # 2회 이상 실행해도 항상 같은 상태 (이미 존재하는 링크는 건너뜀).
-set -uo pipefail
+# 깨진(대상이 사라진) symlink는 자동으로 $src에 재연결한다.
+set -euo pipefail
 
 # 이 스크립트가 있는 곳의 절대경로 = repo 루트.
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -35,10 +36,19 @@ for skill in autoqa autofix autodev autoqafix; do
     fi
 
     if [ -L "$dst" ]; then
-        # 심볼릭 링크가 이미 있음 → 그대로 둠 (idempotent 핵심)
-        target="$(readlink "$dst")"
-        echo "이미 설치됨 (symlink): $dst → $target"
-        skipped=$((skipped + 1))
+        if [ -e "$dst" ]; then
+            # symlink가 존재하고 대상도 resolve됨 → 그대로 둠 (idempotent 핵심)
+            target="$(readlink "$dst")"
+            echo "이미 설치됨 (symlink): $dst → $target"
+            skipped=$((skipped + 1))
+            continue
+        fi
+        # symlink이지만 대상이 사라짐 (dangling) → 제거 후 $src로 재연결.
+        # 삭제 대상은 -L 판정된 링크 자체뿐 — 일반 파일/디렉토리는 절대 삭제하지 않는다.
+        rm -f "$dst"
+        ln -s "$src" "$dst"
+        echo "재연결(깨진 링크 복구): $dst → $src"
+        installed=$((installed + 1))
         continue
     fi
 
