@@ -116,57 +116,137 @@ def _pid_alive(pid: int) -> bool:
     return True
 
 
-def _read_lock(path: Path) -> dict[str, str] | None:
+def peek_lock(repo: Path) -> dict[str, str] | None:
+    """Peek at the lock file for the given repo.
+    Returns None if no lock exists.
+    If the lock cannot be read (directory, permission error, etc.) or is corrupted
+    (invalid PID, invalid datetime), returns a dict with 'error' and 'reason' keys
+    so that callers can distinguish abnormal locks.
+    """
+    path = _lock_path(repo)
     try:
+        if not path.exists():
+            return None
+        if path.is_dir():
+            return {"error": "read_error", "reason": "Is a directory"}
         content = path.read_text()
-    except FileNotFoundError:
-        return None
+    except OSError as e:
+        return {"error": "read_error", "reason": str(e)}
+
     data: dict[str, str] = {}
     for line in content.splitlines():
         if "=" in line:
             k, _, v = line.partition("=")
             data[k.strip()] = v.strip()
+
+    pid_str = data.get("pid", "")
+    try:
+        int(pid_str)
+    except ValueError:
+        data["error"] = "invalid_pid"
+        data["reason"] = f"PID '{pid_str}' is not an integer"
+        return data
+
+    start_str = data.get("start", "")
+    if start_str:
+        try:
+            start_dt = datetime.fromisoformat(start_str)
+            if start_dt.tzinfo is None:
+                start_dt = start_dt.replace(tzinfo=timezone.utc)
+        except Exception as e:
+            data["error"] = "invalid_start"
+            data["reason"] = f"Start time '{start_str}' is invalid ISO format: {e}"
+            return data
+
     return data
+
+
+def is_lock_reclaimable(repo: Path) -> tuple[bool, str]:
+    """Check if the lock for the given repo is reclaimable.
+    Returns a tuple (reclaimable: bool, reason: str).
+    Reclaimable reasons:
+    - 'no_lock': No lock exists.
+    - 'corrupted_lock': Lock cannot be read or is corrupted.
+    - 'dead_pid': The lock owner process is dead (same host).
+    - 'stale_lock': The lock has exceeded AUTOQAFIX_LOCK_STALE_SEC (default 4h).
+    """
+    lock_info = peek_lock(repo)
+    if not lock_info:
+        return True, "no_lock"
+
+    if "error" in lock_info:
+        return True, f"corrupted_lock: {lock_info.get('reason', 'unknown error')}"
+
+    stale_sec = int(os.environ.get("AUTOQAFIX_LOCK_STALE_SEC", str(DEFAULT_LOCK_STALE_SEC)))
+    same_host = lock_info.get("host") == socket.gethostname()
+    pid_val = int(lock_info.get("pid") or "0")
+    pid_dead = same_host and not _pid_alive(pid_val)
+
+    if pid_dead:
+        return True, f"dead_pid: {pid_val}"
+
+    start_str = lock_info.get("start", "")
+    is_stale = False
+    age_sec = None
+    if start_str:
+        try:
+            start_dt = datetime.fromisoformat(start_str)
+            if start_dt.tzinfo is None:
+                start_dt = start_dt.replace(tzinfo=timezone.utc)
+            age_sec = (datetime.now(timezone.utc) - start_dt).total_seconds()
+            is_stale = age_sec > stale_sec
+        except Exception:
+            return True, "corrupted_lock"
+
+    if is_stale:
+        return True, f"stale_lock: age {age_sec:.1f}s > {stale_sec}s"
+
+    return False, "active_lock"
 
 
 def acquire_lock(role: str, repo: Path) -> bool:
     """Try to acquire <repo>/.git/autoqafix.lock. Reclaims a lock whose
     owning PID is dead (same host) or that's older than
-    AUTOQAFIX_LOCK_STALE_SEC (default 4h). Otherwise returns False --
-    caller should report "이미 <role>이 실행 중 (<host>, <start>)"."""
+    AUTOQAFIX_LOCK_STALE_SEC (default 4h), or if the lock is corrupted/directory.
+    Otherwise returns False -- caller should report "이미 <role>이 실행 중 (<host>, <start>)"."""
     path = _lock_path(repo)
-    existing = _read_lock(path)
-    if existing:
-        stale_sec = int(os.environ.get("AUTOQAFIX_LOCK_STALE_SEC", str(DEFAULT_LOCK_STALE_SEC)))
-        same_host = existing.get("host") == socket.gethostname()
-        pid_dead = same_host and not _pid_alive(int(existing.get("pid") or "0"))
-
-        age_sec = None
-        try:
-            start_dt = datetime.fromisoformat(existing.get("start", ""))
-            if start_dt.tzinfo is None:
-                start_dt = start_dt.replace(tzinfo=timezone.utc)
-            age_sec = (datetime.now(timezone.utc) - start_dt).total_seconds()
-        except Exception:
-            pass
-        is_stale = age_sec is not None and age_sec > stale_sec
-
-        if not (pid_dead or is_stale):
+    lock_info = peek_lock(repo)
+    if lock_info:
+        reclaimable, reason = is_lock_reclaimable(repo)
+        if not reclaimable:
             return False
 
-    path.parent.mkdir(parents=True, exist_ok=True)
-    content = (
-        f"host={socket.gethostname()}\n"
-        f"pid={os.getpid()}\n"
-        f"role={role}\n"
-        f"start={datetime.now(timezone.utc).isoformat()}\n"
-    )
-    path.write_text(content)
-    return True
+        try:
+            if path.is_dir() and not path.is_symlink():
+                shutil.rmtree(path)
+            else:
+                path.unlink(missing_ok=True)
+        except OSError:
+            pass
+
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        content = (
+            f"host={socket.gethostname()}\n"
+            f"pid={os.getpid()}\n"
+            f"role={role}\n"
+            f"start={datetime.now(timezone.utc).isoformat()}\n"
+        )
+        path.write_text(content)
+        return True
+    except OSError:
+        return False
 
 
 def release_lock(repo: Path) -> None:
-    _lock_path(repo).unlink(missing_ok=True)
+    path = _lock_path(repo)
+    try:
+        if path.is_dir() and not path.is_symlink():
+            shutil.rmtree(path)
+        else:
+            path.unlink(missing_ok=True)
+    except OSError:
+        pass
 
 
 def clone_id(repo: Path) -> str:
@@ -359,12 +439,66 @@ def _selftest() -> int:
     with tempfile.TemporaryDirectory() as td:
         p = Path(td)
         subprocess.run(["git", "init", "-q", str(p)], check=True)
+        
+        # 1. No lock
+        check("peek_lock returns None when no lock exists", peek_lock(p) is None)
+        reclaimable, reason = is_lock_reclaimable(p)
+        check("is_lock_reclaimable returns True when no lock exists", reclaimable and reason == "no_lock")
+        
+        # 2. Normal lock
         got1 = acquire_lock("qa", p)
+        check("acquire_lock succeeds on empty repo", got1)
         got2 = acquire_lock("fix", p)
+        check("acquire_lock fails when active lock exists", not got2)
+        
+        lock_info = peek_lock(p)
+        check("peek_lock returns lock info dict", lock_info is not None and "error" not in lock_info and lock_info.get("role") == "qa")
+        
+        reclaimable, reason = is_lock_reclaimable(p)
+        check("is_lock_reclaimable returns False for active lock", not reclaimable and reason == "active_lock")
+        
+        # 3. Abnormal PID lock (corrupted lock)
+        lock_path = p / LOCK_REL_PATH
+        lock_path.write_text("host=localhost\npid=abc\nrole=qa\nstart=2026-07-11T12:00:00Z\n")
+        
+        lock_info = peek_lock(p)
+        check("peek_lock returns error for invalid PID", lock_info is not None and "error" in lock_info and lock_info["error"] == "invalid_pid")
+        
+        reclaimable, reason = is_lock_reclaimable(p)
+        check("is_lock_reclaimable returns True for invalid PID lock", reclaimable and "corrupted_lock" in reason)
+        
+        got3 = acquire_lock("fix", p)
+        check("acquire_lock reclaims lock with invalid PID", got3)
+        check("peek_lock returns normal lock info after reclaim", peek_lock(p) is not None and "error" not in peek_lock(p))
+        
+        # 4. Lock path is a directory (abnormal lock)
         release_lock(p)
-        got3 = acquire_lock("qa", p)
+        lock_path.mkdir(parents=True, exist_ok=True)
+        
+        lock_info = peek_lock(p)
+        check("peek_lock returns error when lock path is a directory", lock_info is not None and "error" in lock_info and "directory" in lock_info["reason"].lower())
+        
+        reclaimable, reason = is_lock_reclaimable(p)
+        check("is_lock_reclaimable returns True when lock path is a directory", reclaimable and "corrupted_lock" in reason)
+        
+        got4 = acquire_lock("qa", p)
+        check("acquire_lock reclaims lock when lock path is a directory", got4)
+        check("peek_lock returns normal lock after directory lock reclaim", peek_lock(p) is not None and "error" not in peek_lock(p))
+        
+        # 5. Stale lock
         release_lock(p)
-        check("lock: acquire, deny, release, re-acquire", got1 and not got2 and got3)
+        os.environ["AUTOQAFIX_LOCK_STALE_SEC"] = "10"
+        lock_path.write_text("host=otherhost\npid=99999\nrole=qa\nstart=2020-01-01T00:00:00Z\n")
+        
+        reclaimable, reason = is_lock_reclaimable(p)
+        check("is_lock_reclaimable returns True for stale lock", reclaimable and "stale_lock" in reason)
+        
+        got5 = acquire_lock("fix", p)
+        check("acquire_lock reclaims stale lock", got5)
+        
+        # Cleanup env
+        del os.environ["AUTOQAFIX_LOCK_STALE_SEC"]
+        release_lock(p)
 
     return 0 if ok else 1
 

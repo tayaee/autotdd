@@ -28,8 +28,7 @@ def main():
     # 2. acquire_lock
     lock_acquired = core.acquire_lock("qa", repo_path)
     if not lock_acquired:
-        lock_path = core._lock_path(repo_path)
-        lock_info = core._read_lock(lock_path)
+        lock_info = core.peek_lock(repo_path)
         if lock_info:
             host = lock_info.get("host", "unknown")
             start = lock_info.get("start", "unknown")

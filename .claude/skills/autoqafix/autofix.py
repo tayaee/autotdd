@@ -432,8 +432,7 @@ def main() -> int:
         return 1
 
     if not core.acquire_lock(role, repo):
-        lock_path = core._lock_path(repo)
-        info = core._read_lock(lock_path) or {}
+        info = core.peek_lock(repo) or {}
         host = info.get("host", "unknown")
         start = info.get("start", "unknown")
         print(f"이미 {role}이 실행 중 ({host}, {start})", file=sys.stderr)

@@ -142,14 +142,27 @@ def check_deploy(d: Doctor, repo: Path) -> None:
 
 def check_lock(d: Doctor, repo: Path) -> None:
     """⑥ 뮤텍스 잠금이 현재 잡혀 있지 않은가."""
-    info = core._read_lock(core._lock_path(repo))
+    info = core.peek_lock(repo)
     if info is None:
         d.ok("뮤텍스 잠금 없음")
         return
-    same_host = info.get("host") == socket.gethostname()
-    pid_dead = same_host and not core._pid_alive(int(info.get("pid") or "0"))
-    if pid_dead:
-        d.ok("뮤텍스 잠금 없음 (stale lock — 소유 프로세스 사망, 재획득 가능)")
+
+    if "error" in info:
+        d.fail(
+            "뮤텍스 잠금",
+            f"잠금 파일이 비정상임 ({info['reason']})",
+            ".git/autoqafix.lock 삭제",
+        )
+        return
+
+    reclaimable, reason = core.is_lock_reclaimable(repo)
+    if reclaimable:
+        if "dead_pid" in reason:
+            d.ok("뮤텍스 잠금 없음 (stale lock — 소유 프로세스 사망, 재획득 가능)")
+        elif "stale_lock" in reason:
+            d.ok("뮤텍스 잠금 없음 (stale lock — 보존 시간 만료, 재획득 가능)")
+        else:
+            d.ok(f"뮤텍스 잠금 없음 (stale lock — {reason}, 재획득 가능)")
     else:
         d.fail(
             "뮤텍스 잠금",
