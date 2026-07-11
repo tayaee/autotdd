@@ -15,6 +15,12 @@ deploy 스크립트 부재만은 FAIL이 아닌 WARN이다 — 그 파일은 대
 준비하는 것이며 이 도구는 절대 생성하지 않는다. exit code = FAIL 수
 (WARN 미포함). `--ping`을 주면 후보 래퍼의 ping-<래퍼명>도 실행한다
 (실 크레딧 소모 가능 — 기본은 실행하지 않음).
+
+preflight role 단위 FAIL 계수: `check_preflight`는 `preflight("qa")`와
+`preflight("fix")`를 별도 호출하고 그 결과를 `Doctor.fail_preformatted`
+로 그대로 흘리므로, 한 role에 N개 결함이 있으면 N건 FAIL로 계수된다.
+(`preflight` 반환 메시지의 2줄 포맷 계약은 `autoqafix_core.preflight`
+docstring을 참조.)
 """
 from __future__ import annotations
 
@@ -47,7 +53,14 @@ class Doctor:
         print(f"[조치] {action}")
 
     def fail_preformatted(self, item: str, msg: str) -> None:
-        """preflight()가 이미 만든 [원인]/[조치] 2줄 메시지를 그대로 사용."""
+        """preflight()가 이미 만든 메시지를 그대로 사용.
+
+        메시지 포맷 계약: `msg`는 `autoqafix_core.preflight()`가 만드는
+        `[원인] ...\\n[조치] ...` 2줄 문자열이다 (자세한 계약 =
+        preflight docstring). 이 함수/소비자 모두 본문을 파싱하지 않고
+        그대로 흘리므로, preflight의 2줄 포맷이 깨지면 이 경로의 출력도
+        깨진다 — preflight와 이 함수 양쪽을 같은 PR에서 함께 수정할 것.
+        """
         self.fails += 1
         print(f"FAIL {item}")
         print(msg)
@@ -68,7 +81,16 @@ def check_preflight(d: Doctor, repo: Path) -> None:
 
 
 def check_wrappers(d: Doctor, names: list[str], wrapper_dir: Path) -> None:
-    """② AUTOQAFIX_WRAPPERS의 래퍼들이 wrappers/ 또는 PATH에 존재."""
+    """② AUTOQAFIX_WRAPPERS의 래퍼들이 wrappers/ 또는 PATH에 존재.
+
+    경로 결정 의도 (run_pings와 비대칭):
+        래퍼(`<name>.{sh,ps1,bat}`)는 시스템 전역 도구처럼 동작해도 무방하다
+        — 사용자가 패키지 매니저/수동 PATH 등록으로 설치한 시스템 인스톨도
+        정상이므로 `wrapper_dir` ∨ `PATH` 이중 폴백을 사용한다. 단, 진단
+        대상 repo의 테스트 주입 경로(`wrapper_dir` env) 우선 정책은 유지
+        — 이는 `run_pings`도 동일한 wrapper_dir → 기본 dir 폴백을 따른다.
+        비대칭은 "PATH 폴백의 유무"이지 "주입 경로 우선"은 아니다.
+    """
     for name in names:
         in_dir = any(
             (wrapper_dir / f"{name}{ext}").is_file() for ext in (".sh", ".ps1", ".bat")
@@ -200,7 +222,17 @@ def check_skills(d: Doctor) -> None:
 
 
 def run_pings(d: Doctor, names: list[str], wrapper_dir: Path) -> None:
-    """③' --ping: 후보 래퍼의 ping-<래퍼명> 실행 (크레딧 소모 경고 선출력)."""
+    """③' --ping: 후보 래퍼의 ping-<래퍼명> 실행 (크레딧 소모 경고 선출력).
+
+    경로 결정 의도 (check_wrappers와 비대칭):
+        `ping-<name>.{sh,ps1,bat}`은 autoqafix 스킬 배포물에 짝으로
+        번들되는 진단 스크립트이지 일반 시스템 CLI가 아니다 — 사용자가 PATH
+        에 별도 설치할 일이 없고, 만약 PATH에 있으면 ping이 누구의 것인지
+        출처 추적이 어려워진다. 따라서 `AUTOQAFIX_WRAPPER_DIR`(테스트 주입)
+        → 스킬 폴더 `wrappers/` 이중 폴백만 사용하고 PATH 폴백은 의도적으로
+        두지 않는다. `check_wrappers`의 dir ∨ PATH 폴백과 비대칭인 이유가
+        여기에 있다 — ping은 스킬 내부 자원, 래퍼는 외부 자원의 얼굴.
+    """
     print("⚠ --ping: 실제 LLM 호출로 크레딧이 소모될 수 있습니다 — 진행합니다")
     
     if os.name == "nt":

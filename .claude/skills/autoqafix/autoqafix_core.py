@@ -52,10 +52,16 @@ def _msg(reason: str, action: str) -> str:
 def preflight(role: str, repo: Path) -> list[str]:
     """Return a list of failure messages (empty = all checks passed).
 
-    Each message is exactly two lines: "[원인] ...\\n[조치] ...". `repo`
-    is the directory being preflighted -- every check below runs against
-    it explicitly (rather than the process's os.getcwd()) so callers can
-    preflight a fixture or a different checkout without chdir'ing.
+    메시지 계약 (formal contract):
+        Each message is exactly two lines: `"[원인] ...\\n[조치] ..."`
+        (produced by `_msg(reason, action)`). 이 2줄 포맷이
+        `autoqafix-doctor.Doctor.fail_preformatted`와 다른 출력 소비자가
+        암묵 의존하므로 소비자가 본문을 파싱하기에 앞서 절대 깨지 말 것.
+        새 항목을 추가할 때도 동일한 2줄 포맷을 유지할 것.
+
+    `repo`는 preflight 대상 디렉토리 — 모든 검사는 `os.getcwd()`가 아닌
+    이 인자에서 명시 실행되므로 호출자가 chdir하지 않고도 픽스처나 다른
+    체크아웃을 preflight할 수 있다.
     """
     repo = Path(repo)
     failures: list[str] = []

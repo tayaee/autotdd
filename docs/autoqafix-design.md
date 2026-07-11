@@ -111,6 +111,55 @@ frequency: <횟수> (<구간 시작> ~ <구간 끝>)
 - 검증은 크레딧 제로: `regression-tests/lib/`의 fake 래퍼·픽스처 repo 생성기만 사용.
   실 LLM 확인은 사람이 `ping-*`으로
 
+## 진단 (autoqafix-doctor)
+
+이 repo에서 autoqafix 스위트가 그 순간 동작 가능한가를 사람이/스크립트가
+실행 전에 점검하는 도구. `preflight(issue-10)`의 상위 집합이며, 사전
+구현된 모든 검사를 한 번에 돌린다. 진입점은 `autoqafix-doctor.{sh,ps1,bat}`
+(엔진은 `.claude/skills/autoqafix/autoqafix-doctor.py`).
+
+검사 7항목 (순서 고정):
+
+1. **preflight("qa")·preflight("fix")** — `autoqafix_core.preflight`를 두
+   role로 모두 호출. 메시지 계약: 반환값의 각 항목은 `"[원인] ...\n[조치] ..."`
+   2줄. doctor는 이 메시지를 파싱하지 않고 그대로 출력(`fail_preformatted`).
+2. **래퍼 존재** — `AUTOQAFIX_WRAPPERS` 후보 각각이 `<wrapper_dir>/<name>.{sh,ps1,bat}`
+   또는 PATH에 있는지 (테스트 주입 우선). 비대칭: ping은 스킬 내부
+   자원이므로 PATH 폴백을 두지 않는다 (아래 `--ping` 참조).
+3. **usage 스크립트 기동** — `usage-<name>.py`를 `uv -q run`으로 60초 내
+   실행, stdout이 유효 JSON인지. 성공 시 출력은
+   `AUTOQAFIX_USAGE_DATA_<NAME>` env로 주입되어 후속 `select-llm`이
+   재계산 없이 읽는다.
+4. **select-llm 동작** — `select-llm.py`를 120초 내 실행, stdout이 후보
+   래퍼명 또는 `"none"`인지. exit 2 = "none" 정상.
+5. **deploy 스크립트** — 진단 대상 repo 안에
+   `deploy.{sh,ps1,bat}` 또는 `deploy-to-*{sh,ps1,bat}` 중 하나 존재
+   (`env`는 dev/staging/prod 등 실제 환경명 플레이스홀더). **부재는
+   FAIL이 아닌 WARN** — 그 파일은 대상 repo가 준비하는 것이며 이 도구는
+   절대 생성하지 않는다.
+6. **뮤텍스 잠금** — `<repo>/.git/autoqafix.lock`이 잠겨 있는지의 단일
+   진실 소스는 `autoqafix_core.peek_lock`/`is_lock_reclaimable`/`acquire_lock`
+   (issue-24에서 공용 API로 추출). 정상이면 OK, 부실 잠금(dead_pid,
+   stale_lock)이면 회수 가능 안내 OK, 살아있는 잠금이면 FAIL.
+7. **필수 스킬** — `~/.claude/skills/{autotdd,tdd2,acpd,tdd}` 존재.
+   `preflight(fix)`와 중복되는 3종은 OK 줄만(부재 시 silent), `tdd`만
+   FAIL 계수.
+
+추가 옵션:
+
+- `--ping`: 후보 래퍼의 `ping-<name>.{sh,ps1,bat}`을 실제 실행(LLM
+  호출, 크레딧 소모). 경로 결정 = `AUTOQAFIX_WRAPPER_DIR` → 스킬 폴더
+  `wrappers/` 이중 폴백 (PATH 없음 — 위 ②와 비대칭의 이유).
+
+exit 규약: `print("진단 완료: FAIL N건")` 후 `sys.exit(N)` (WARN 미포함).
+`N == 0`이면 exit 0, 한 건이라도 FAIL이면 N. `deploy` 부재 WARN만 있는
+경우는 exit 0이다.
+
+lock 회수 판정은 issue-24 단일 소스: `autoqafix_core.peek_lock` /
+`is_lock_reclaimable` / `acquire_lock`. doctor는 이 셋만 호출하고 자체
+잠금 판단 로직을 두지 않는다 — 정책이 바뀌면 doctor 출력도 자동으로
+따라가도록 단방향 의존성 유지.
+
 ## 사용 방식 3가지
 
 1. Claude Code 스킬 트리거: `/autoqa` `/autofix` `/autodev` `/autoqafix` — 1회형 실행
