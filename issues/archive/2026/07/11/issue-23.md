@@ -35,3 +35,27 @@ issue-3 ~ issue-22가 모두 archive된 뒤 작성한다.
 ## 검증
 
 `regression-tests/verify-issue-23.sh` 작성: 섹션 존재 + 경로 실재 검사.
+
+## 구현 결과
+
+- **구현 완료 일시**: 2026-07-11T20:55:00+0000
+- **변경 파일**:
+  - `docs/SETUP-autoqafix.md` (신규) — 7개 섹션(사전 준비 / 점검 순서 /
+    Windows production 배치 / WSL 수동 사용 / Claude Code 스킬 / 운영 규약
+    요약 / 알려진 정리 작업)으로 구성. 모든 명령은 복사-실행 가능한 코드블록.
+  - `regression-tests/verify-issue-23.sh` (신규) — 9개 section/marker assertion
+    + 11개 `<autotdd>/...` 경로 실재 검사 = 20 PASS.
+- **계획과 차이**:
+  - 원안의 `<autotdd>\autoqafix-loop.bat --reboot-on-fix`는 실재하지 않는 파일
+    (현재 `<autotdd>` 루트에는 `autodev-loop.{bat,sh,ps1}`, `autofix-loop.{bat,sh,ps1}`,
+    `autoqa-loop.{bat,sh,ps1}` 만 존재 — `role-loop.py --role {qa,fix,dev}` 디스패처).
+    본 문서는 이를 충실히 반영해 "역할별로 다름" 명시 후 3개 loop.bat 모두
+    예시로 인용. 추후 `autoqafix-loop.{bat,sh,ps1}` 파일이 별도 이슈로
+    신설되면 본 문서를 갱신할 것.
+  - `<autotdd>` 표기는 autotdd 클론 위치(권장 `~/git/autotdd`)를 가리키는
+    플레이스홀더. 사용자가 실제 경로로 치환해 읽는다.
+- **검증 결과**: verify-issue-23.sh 20 PASS / 0 FAIL. 전체 회귀 32/32 rc=0.
+  모든 11개 `<autotdd>/...` 경로 실재 확인 (autoqafix-doctor.sh, autoqa.sh,
+  autofix.sh, autodev.sh, autodev-loop.sh, autofix-loop.sh, install.sh,
+  CONTEXT.md, docs/autoqafix-design.md, wrappers/ping-claudecli.sh,
+  wrappers/ping-qwencli.sh).
