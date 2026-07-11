@@ -3,7 +3,7 @@
 # `uv -q run`. Stream defaults to autofix (see autofix.py STREAM_DEFAULT).
 if (-not (Get-Command uv -ErrorAction SilentlyContinue)) {
     Write-Output "[원인] uv 없음"
-    Write-Output "[조치] curl -LsSf https://astral.sh/uv/install.sh | sh"
+    Write-Output "[조치] irm https://astral.sh/uv/install.ps1 | iex"
     exit 127
 }
 

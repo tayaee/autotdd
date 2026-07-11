@@ -5,7 +5,7 @@ rem `uv -q run`. Stream defaults to autofix (see autofix.py STREAM_DEFAULT).
 where uv >nul 2>nul
 if %ERRORLEVEL% neq 0 (
     echo [원인] uv 없음
-    echo [조치] curl -LsSf https://astral.sh/uv/install.sh | sh
+    echo [조치] powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
     pause
     exit /b 127
 )

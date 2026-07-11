@@ -3,7 +3,7 @@
 # Mirrors autoqa.ps1 pattern (issue-14).
 if (-not (Get-Command uv -ErrorAction SilentlyContinue)) {
     Write-Output "[원인] uv 없음"
-    Write-Output "[조치] curl -LsSf https://astral.sh/uv/install.sh | sh"
+    Write-Output "[조치] irm https://astral.sh/uv/install.ps1 | iex"
     exit 127
 }
 
