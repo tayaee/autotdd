@@ -14,6 +14,21 @@ Combined skill that chains both, per issue, fully automatically:
 (`git add`, not yet committed) — that's where `/tdd2` stops. This
 skill does the rest.
 
+## Stream conventions
+
+Two issue streams are handled:
+
+- **Stream IDs**: `issue-<N>` and `autofix-<N>`. Bare-number arguments
+  (e.g., `aacp 22`) default to the `issue` stream; `aacp autofix-3`
+  selects the autofix stream.
+- **Archive target**: `issues/archive/<YYYY>/<MM>/<DD>/<stream>-<N>.md`
+  for either stream.
+- **Commit prefix**: `<stream>-<N>: <summary>` (e.g., `issue-22: ...`,
+  `autofix-3: ...`).
+- **Enumeration glob**: only files matching `<stream>-<digits>.md`
+  exactly are listed as pending. Suffix files like `*-later.md`,
+  `*-manual.md`, `*-agent-failed.md` are excluded.
+
 ## A naming note before anything else
 
 `acpd` is a sequence of **five** steps: **A**rchive the issue file,

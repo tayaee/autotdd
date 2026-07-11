@@ -33,3 +33,26 @@ agent-tier: paid-only
 
 `regression-tests/verify-issue-22.sh` 작성: 위 grep 검사들 (파일 경로는 repo
 상대 `.claude/skills/...` 기준).
+
+## 구현 결과
+
+- **구현 완료 일시**: 2026-07-11T20:50:00+0000
+- **변경 파일**:
+  - `.claude/skills/tdd2/SKILL.md` — `## Stream conventions` 섹션 신설 (두 스트림
+    id, 인자 파싱, glob 접미사 제외, verify-<stream>-<N> 경로 명시), 14줄 추가
+  - `.claude/skills/autotdd/SKILL.md` — `## Stream conventions` 섹션 신설 (두 스트림,
+    glob 접미사 제외, worktree 분기명 `<stream>-<N>`), 8줄 추가
+  - `.claude/skills/acpd/SKILL.md` — `## Stream conventions` 섹션 신설 (두 스트림,
+    archive 경로, commit 접두사, glob 접미사 제외), 10줄 추가
+  - `.claude/skills/acpd/aacp.sh` — `--pending` glob에 `autofix-*.md` 추가 +
+    `STREAM`/`N` 분리로 `<stream>-<N>` 일반화 (ISSUE_FILE, archive 경로, commit
+    prefix), 7줄 추가 / 2줄 변경 (총 9줄 영향)
+  - `regression-tests/verify-issue-22.sh` — 8 assertions (3 SKILL.md × autofix,
+    3 SKILL.md × suffix, tdd2 verify-<stream>, aacp.sh autofix-)
+- **계획과 차이**: 없음. 모든 변경은 요구사항 그대로 — 각 SKILL.md에 `## Stream
+  conventions` 섹션을 신설해 4개 항목(id 형태, 인자 파싱, glob, 명명/접두사)을
+  한 곳에서 명시. 기존 본문(인자 파싱, glob, verify 스크립트 경로 등)은 그대로
+  두고 보강만 함 — 본문 인용은 새 섹션이 정본.
+- **검증 결과**: verify-issue-22.sh 8 PASS / 0 FAIL. 전체 회귀 31/31 rc=0
+  (verify-issue-{3..35}.sh 중 issue-22/35 외 빈 테스트 29건 포함). aacp.sh
+  `--pending` 동작 정상 (현재 pending 0건).

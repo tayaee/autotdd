@@ -13,6 +13,19 @@ for each issue number.
 
 **= implement (+verify+git add) + merge (archive+commit+push) + deploy to dev**
 
+## Stream conventions
+
+Two issue streams are orchestrated:
+
+- **Stream IDs**: `issue-<N>` and `autofix-<N>`. Bare-number arguments
+  (e.g., `autotdd 22`) default to the `issue` stream.
+- **Enumeration glob**: only files matching `<stream>-<digits>.md`
+  exactly are listed as remaining issues. Suffix files like
+  `*-later.md`, `*-manual.md`, `*-agent-failed.md` are excluded from the
+  "remaining issues" prompt.
+- **Worktree branch name** (worktree mode): `<stream>-<N>` (e.g.,
+  `autofix-3` for an autofix-stream issue).
+
 ## How this package relates to plain `/tdd`
 
 Once Matt Pocock's `tdd` skill and this package are both installed,

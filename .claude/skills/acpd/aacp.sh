@@ -37,10 +37,10 @@ cd "$REPO_ROOT"
 # this reuses the issue template's own completion marker.
 if [ "${1:-}" = "--pending" ]; then
   shopt -s nullglob
-  for f in issues/issue-*.md; do
+  for f in issues/issue-*.md issues/autofix-*.md; do
     if grep -q '\*\*구현 완료 일시\*\*:' "$f" \
        && ! grep -q '\*\*구현 완료 일시\*\*: *(미정)' "$f"; then
-      basename "$f" .md | sed 's/^issue-//'
+      basename "$f" .md
     fi
   done
   exit 0
@@ -51,7 +51,13 @@ ISSUE_NUM="$1"
 shift
 SUMMARY="$*"
 
-ISSUE_FILE="issues/issue-${ISSUE_NUM}.md"
+# Stream detection: "issue-N" / "autofix-N" / bare "N" (defaults to issue).
+case "$ISSUE_NUM" in
+    issue-*|autofix-*) STREAM="${ISSUE_NUM%%-*}"; N="${ISSUE_NUM#*-}" ;;
+    *)                 STREAM="issue";            N="$ISSUE_NUM" ;;
+esac
+
+ISSUE_FILE="issues/${STREAM}-${N}.md"
 if [ ! -f "$ISSUE_FILE" ]; then
   echo "ERROR: $ISSUE_FILE not found" >&2
   exit 1
@@ -89,13 +95,13 @@ git add "$ISSUE_FILE"
 # 2. Archive: move to issues/archive/YYYY/MM/DD/ (git mv auto-stages the rename).
 ARCHIVE_DIR="issues/archive/$(date +%Y/%m/%d)"
 mkdir -p "$ARCHIVE_DIR"
-git mv "$ISSUE_FILE" "$ARCHIVE_DIR/issue-${ISSUE_NUM}.md"
+git mv "$ISSUE_FILE" "$ARCHIVE_DIR/${STREAM}-${N}.md"
 
 # 3. Stage the rest of the already-tracked changes (never untracked files).
 git add -u
 
 # 4. Commit code + archiving as ONE commit.
-COMMIT_MSG="issue-${ISSUE_NUM}: ${SUMMARY}
+COMMIT_MSG="${STREAM}-${N}: ${SUMMARY}
 
 Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
 git commit -m "$COMMIT_MSG"

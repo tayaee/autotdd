@@ -22,6 +22,23 @@ convention and bundled defaults (`../acpd/defaults/`, a sibling skill
 directory — both ship together in this package) rather than
 duplicating them.
 
+## Stream conventions
+
+Two issue streams are recognized:
+
+- **Stream IDs**: `issue-<N>` and `autofix-<N>`. Bare-number arguments
+  (e.g., `tdd2 22`) default to the `issue` stream.
+- **Argument parsing**: `tdd2 issue-N`, `tdd2 autofix-N`, `tdd2 N` all
+  work — the first two specify the stream explicitly.
+- **Enumeration glob**: only files whose names match
+  `<stream>-<digits>.md` exactly are listed as pending. Suffix files
+  like `issue-3-later.md`, `issue-3-manual.md`, `issue-3-agent-failed.md`
+  (and the same `-later` / `-manual` / `-agent-failed` variants for the
+  `autofix` stream) are excluded from "remaining issues" — they're
+  hand-parked exceptions, not work to be picked up.
+- **Regression script path**: `regression-tests/verify-<stream>-<N>.sh`
+  (e.g., `verify-issue-22.sh`, `verify-autofix-3.sh`).
+
 ## Argument parsing
 
 `tdd2 issue-280`, `tdd2 issue 280`, `tdd2 280` are all the same thing:
