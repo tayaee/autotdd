@@ -4,10 +4,11 @@
 # dependencies = []
 # ///
 """autofix — implementation engine for the autofix / autodev streams
-(docs/autoqafix-design.md "autofix / autodev"). Engine skeleton from
-issue-15: agent worktree at state_dir/worktree, per-item LLM re-selection,
-`tier stamp` for items missing `agent-tier:`, tier matching, then dispatch
-(here a stub — real archive dispatch lands in issue-16).
+(docs/autoqafix-design.md "autofix / autodev"). Agent worktree at
+state_dir/worktree, per-item LLM re-selection, `tier stamp` for items
+missing `agent-tier:`, tier matching, then dispatch: run the wrapper in
+the worktree, judge success by archive presence after pull, recover the
+worktree and push an `-agent-failed` record on failure/timeout (issue-16).
 
 Stream is selected by --stream (default autofix; pass `issue` for autodev).
 Role passed to preflight/lock follows: autofix → fix, autodev → dev.
@@ -106,7 +107,7 @@ def enumerate_items(worktree: Path, stream: str) -> list[Path]:
     for f in sorted(issues_dir.iterdir()):
         if not f.is_file():
             continue
-        m = pattern.match(f.name)
+        m = pattern.fullmatch(f.name)
         if not m:
             continue
         if m.group(2):  # has a recognized state suffix
@@ -159,7 +160,7 @@ def read_agent_tier(path: Path) -> str | None:
     return None
 
 
-def judge_tier(item: Path, wrapper: str, wrapper_path: Path) -> str | None:
+def judge_tier(item: Path, wrapper_path: Path) -> str | None:
     """Run the wrapper with light timeout, parse trailing `TIER: <value>`
     line. Returns tier or None on parse / runner failure."""
     try:
@@ -225,7 +226,7 @@ def stamp_tier(worktree: Path, item: Path, tier: str) -> None:
     _git_or_die(worktree, "add", str(rel))
     _git_or_die(worktree, "commit", "-q", "-m", f"{item.stem}: agent-tier={tier}")
     # Detached HEAD needs explicit refspec to advance origin/main.
-    _git_or_die(worktree, "push", "origin", "HEAD:main")
+    _push_with_retry(worktree)
 
 
 def rename_to_manual(worktree: Path, item: Path) -> None:
@@ -237,121 +238,103 @@ def rename_to_manual(worktree: Path, item: Path) -> None:
     _git_or_die(
         worktree, "commit", "-q", "-m", f"{new_path.stem}: 사람 담당으로 분류"
     )
+    _push_with_retry(worktree)
+
+
+def _is_archived(worktree: Path, item_name: str) -> bool:
+    """issue-16 req 2: the item is gone from issues/ and present under
+    issues/archive/**."""
+    issues_dir = worktree / "issues"
+    if (issues_dir / item_name).is_file():
+        return False
+    archive_dir = issues_dir / "archive"
+    if not archive_dir.is_dir():
+        return False
+    return any(p.name == item_name for p in archive_dir.rglob("*.md"))
+
+
+def _push_with_retry(worktree: Path) -> None:
+    """Push HEAD to origin/main; on rejection (a concurrent push landed
+    first) rebase once and retry — the finalize_item pattern (issue-11)."""
+    proc = core._git(worktree, "push", "origin", "HEAD:main")
+    if proc.returncode == 0:
+        return
+    _git_or_die(worktree, "pull", "--rebase", "origin", "main")
     _git_or_die(worktree, "push", "origin", "HEAD:main")
 
 
-def dispatch(item: Path, wrapper: str, stream: str, repo: Path) -> bool:
+def dispatch(item: Path, wrapper: str, wrapper_path: Path, worktree: Path, repo: Path) -> bool:
     """Run the wrapper inside the agent worktree and judge success by
-    archive presence.
+    archive presence after a pull (design doc "autofix / autodev" 4번) —
+    the wrapper's exit code is NOT part of the success test, so a wrapper
+    that archives+pushes and then dies abnormally still counts as success.
 
-    Returns ``True`` when the item file has been archived by the wrapper,
-    ``False`` on failure / timeout (the worktree is recovered and an
-    ``-agent-failed`` record is written).
+    On failure/timeout the worktree is recovered with
+    `reset --hard origin/main` + `git worktree prune` (issue-16 req 3) and
+    an ``-agent-failed`` record is committed and pushed.
     """
-    # Extract the item number from the filename (``autofix-<N>`` or
-    # ``issue-<N>``).
-    stem = item.stem  # e.g. "autofix-3"
-    _, _, n = stem.partition("-")
-    if not n:
-        return False
-
-    wt = item.parent.parent  # worktree path (issues/ → worktree parent)
-    # Walk up until we find the worktree root (state_dir / "worktree").
-    # The worktree is at state_dir/worktree; items are at
-    # state_dir/worktree/issues/<stream>-<N>.md
-    # In a worktree, .git is a FILE (gitdir pointer), not a directory.
-    for ancestor in item.parents:
-        git_path = ancestor / ".git"
-        if git_path.is_file() or git_path.is_dir():
-            wt = ancestor
-            break
-
     cmd = [
-        wrapper, "-p",
-        f"/autotdd {stream}-{n} worktree",
+        "bash", str(wrapper_path), "-p",
+        f"/autotdd {item.stem} worktree",
     ]
     timeout_sec = float(
         os.environ.get("AUTOQAFIX_IMPL_TIMEOUT", "10800")
     )
 
-    # Set FAKE_TARGET so fake-wrapper knows which item to archive.
-    env = dict(os.environ)
-    env["FAKE_TARGET"] = str(item)
-
-    rc, stdout, stderr, timed_out = core.run_with_timeout(
-        cmd, timeout_sec, cwd=wt, env=env,
+    rc, _, stderr, timed_out = core.run_with_timeout(
+        cmd, timeout_sec, cwd=worktree,
     )
 
-    # ── success path ──────────────────────────────────────────────
-    if not timed_out and rc == 0:
-        # Pull to pick up any archive moves the wrapper committed.
-        pull = core._git(wt, "pull", "--rebase", "origin", "main")
-        if pull.returncode != 0:
-            return False
-
-        archive_pattern = f"{stream}-{n}.md"
-        issues_dir = wt / "issues"
-        if not issues_dir.is_dir():
-            return False
-
-        # Check direct file first.
-        if (issues_dir / archive_pattern).is_file():
-            return False  # not archived yet
-
-        # Check archive/**/*.md.
-        for af in issues_dir.rglob("archive/**/*.md"):
-            if af.name == archive_pattern:
-                return True
-
-        return False
+    # ── success test (rc-independent; timeout excluded) ───────────
+    if not timed_out:
+        pull = core._git(worktree, "pull", "--rebase", "origin", "main")
+        if pull.returncode == 0 and _is_archived(worktree, item.name):
+            return True
+        # Not archived (or dirty worktree broke the pull) → failure path.
 
     # ── failure / timeout path ────────────────────────────────────
-    # Capture item content BEFORE resetting the worktree.
-    try:
-        original_body = item.read_text(encoding="utf-8", errors="ignore")
-    except Exception:
-        original_body = ""
+    # Recover the worktree first (issue-16 req 3). Fetch so origin/main
+    # is fresh even when the wrapper pushed from inside this worktree
+    # right before dying.
+    core._git(worktree, "fetch", "origin", "main")
+    _git_or_die(worktree, "reset", "--hard", "origin/main")
+    core._git(repo, "worktree", "prune")
 
-    # Append 실패 기록 — BEFORE any git operations that might
-    # remove the item file or the worktree itself.
+    if not item.exists():
+        # Gone from origin/main despite the failure signal (e.g. the
+        # wrapper archived+pushed, then hung until the timeout): no file
+        # to record against — success iff it actually reached archive/.
+        return _is_archived(worktree, item.name)
+
     now = datetime.now(timezone.utc).isoformat()
     if timed_out:
-        detail = f"timeout ({timeout_sec}s)"
+        detail = f"timeout ({int(timeout_sec)}s)"
     else:
         detail = f"exit {rc}"
 
-    # Last 3 lines of stderr.
-    last_lines = "\n".join(
-        stderr.strip().splitlines()[-3:]
-    ) if stderr.strip() else "(no stderr)"
+    # One markdown bullet: stderr's last 3 lines as indented
+    # continuation lines so the list doesn't break.
+    tail = stderr.strip().splitlines()[-3:] if stderr.strip() else ["(no stderr)"]
+    record = f"- {now} {wrapper}: {detail}\n" + "".join(f"  {ln}\n" for ln in tail)
 
-    record = f"- {now} {wrapper}: {detail}\n{last_lines}\n"
-
-    # Ensure ## agent 실패 기록 section exists.
-    body = original_body
+    body = item.read_text(encoding="utf-8", errors="ignore")
+    if body and not body.endswith("\n"):
+        body += "\n"
     if "## agent 실패 기록" not in body:
         body += "\n## agent 실패 기록\n"
-
     body += record
     item.write_text(body)
 
-    # git mv to -agent-failed, commit, push — inside the worktree.
-    new_name = f"{stem}-agent-failed.md"
-    new_path = item.parent / new_name
-    rel_old = item.relative_to(wt)
-    rel_new = new_path.relative_to(wt)
-    _git_or_die(wt, "mv", str(rel_old), str(rel_new))
-    _git_or_die(wt, "add", str(rel_new))  # Stage the content change
+    new_path = item.parent / f"{item.stem}-agent-failed.md"
+    rel_old = item.relative_to(worktree)
+    rel_new = new_path.relative_to(worktree)
+    _git_or_die(worktree, "mv", str(rel_old), str(rel_new))
+    _git_or_die(worktree, "add", str(rel_new))  # stage the content change
     _git_or_die(
-        wt, "commit", "-q",
+        worktree, "commit", "-q",
         "-m", f"{new_path.stem}: agent 실패 — {detail}",
     )
-    _git_or_die(wt, "push", "origin", "HEAD:main")
-
-    # Recover worktree — prune AFTER pushing the -agent-failed record.
-    # git worktree prune must run from the main repo (the fixture),
-    # not from the worktree itself.
-    core._git(repo, "worktree", "prune")
+    _push_with_retry(worktree)
 
     return False
 
@@ -368,10 +351,12 @@ def run(repo: Path, stream: str) -> int:
     ensure_worktree(repo, worktree)
     items = enumerate_items(worktree, stream)
 
-    processed = 0  # dispatched + renamed-to-manual
-    skipped = 0    # not-this-time skip (already-correct tier or wrong tier)
-    stamped = 0    # newly-stamped items
-    fixed = 0      # items successfully archived by dispatch
+    dispatched = 0  # items handed to a wrapper (success or failure)
+    manual = 0      # items renamed to -manual
+    skipped = 0     # not-this-time skip (tier mismatch, no judgement, ...)
+    stamped = 0     # newly-stamped items
+    fixed = 0       # items successfully archived by dispatch
+    errors = 0      # per-item internal errors (engine keeps going)
 
     for item in items:
         selected, tiers = select_llm()
@@ -380,42 +365,55 @@ def run(repo: Path, stream: str) -> int:
             break
 
         tier_sel = tiers.get(selected, "local")
-        item_tier = read_agent_tier(item)
 
-        # ② Tier stamping for un-stamped items (paid selection only).
-        if item_tier is None:
-            if tier_sel != "paid":
-                # Only local is reachable, and local can't run tier judgement.
+        # A per-item git/IO error must not kill the whole run — record
+        # it and move to the next item (issue-16 req 3 "다음 항목").
+        try:
+            item_tier = read_agent_tier(item)
+
+            # ② Tier stamping for un-stamped items (paid selection only).
+            if item_tier is None:
+                if tier_sel != "paid":
+                    # Only local is reachable, and local can't run tier judgement.
+                    skipped += 1
+                    continue
+                wp = wrapper_dir / f"{selected}.sh"
+                if not wp.is_file():
+                    skipped += 1
+                    continue
+                judged = judge_tier(item, wp)
+                if judged is None:
+                    skipped += 1
+                    continue
+                stamp_tier(worktree, item, judged)
+                item_tier = judged
+                stamped += 1
+
+            # ③ Tier matching.
+            if tier_sel == "local" and item_tier == "paid-only":
                 skipped += 1
                 continue
+            if item_tier == "manual":
+                rename_to_manual(worktree, item)
+                manual += 1
+                continue
+
+            # ④ Match passed → dispatch (real archive dispatch).
             wp = wrapper_dir / f"{selected}.sh"
             if not wp.is_file():
+                print(f"{item.name}: 래퍼 없음 ({wp}) — 건너뜀", file=sys.stderr)
                 skipped += 1
                 continue
-            judged = judge_tier(item, selected, wp)
-            if judged is None:
-                skipped += 1
-                continue
-            stamp_tier(worktree, item, judged)
-            item_tier = judged
-            stamped += 1
-
-        # ③ Tier matching.
-        if tier_sel == "local" and item_tier == "paid-only":
-            skipped += 1
-            continue
-        if item_tier == "manual":
-            rename_to_manual(worktree, item)
-            processed += 1
-            continue
-
-        # ④ Match passed → dispatch (real archive dispatch).
-        if dispatch(item, selected, stream, repo):
-            fixed += 1
-        processed += 1
+            if dispatch(item, selected, wp, worktree, repo):
+                fixed += 1
+            dispatched += 1
+        except (RuntimeError, OSError) as exc:
+            errors += 1
+            print(f"{item.name}: 오류 — 다음 항목으로 진행: {exc}", file=sys.stderr)
 
     print(
-        f"처리: {processed}건, 건너뜀: {skipped}건, 스탬프 추가: {stamped}건"
+        f"처리: {dispatched}건, 수동 분류: {manual}건, 건너뜀: {skipped}건, "
+        f"스탬프 추가: {stamped}건, 오류: {errors}건"
     )
     print(f"FIXED={fixed}")
     return 0

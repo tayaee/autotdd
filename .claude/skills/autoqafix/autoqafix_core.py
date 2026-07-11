@@ -209,34 +209,17 @@ def run_with_timeout(
         return proc.returncode, stdout, stderr, False
     except subprocess.TimeoutExpired:
         if os.name == "posix":
-            # First try SIGTERM to allow graceful shutdown.
+            # Unconditional group SIGKILL (issue-10 semantics). A SIGTERM
+            # grace period would let SIGTERM-ignoring grandchildren survive
+            # the "kill the whole tree" guarantee and inflate the effective
+            # timeout by several seconds.
             try:
-                pgid = os.getpgid(proc.pid)
-                os.killpg(pgid, signal.SIGTERM)
-            except (ProcessLookupError, OSError):
-                pass
-            # Wait briefly for graceful shutdown.
-            try:
-                proc.wait(timeout=1)
-                # Process exited gracefully; drain output.
-                stdout, stderr = proc.communicate()
-                return -1, stdout, stderr, True
-            except subprocess.TimeoutExpired:
-                pass
-            # SIGTERM didn't work — escalate to SIGKILL.
-            try:
-                pgid = os.getpgid(proc.pid)
-                os.killpg(pgid, signal.SIGKILL)
+                os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
             except (ProcessLookupError, OSError):
                 pass
             try:
                 proc.kill()
             except ProcessLookupError:
-                pass
-            # Wait for the process to exit.
-            try:
-                proc.wait(timeout=2)
-            except subprocess.TimeoutExpired:
                 pass
         else:
             subprocess.run(["taskkill", "/PID", str(proc.pid), "/T", "/F"])
@@ -244,7 +227,9 @@ def run_with_timeout(
         try:
             stdout, stderr = proc.communicate(timeout=2)
         except subprocess.TimeoutExpired:
-            stdout, stderr = proc.stdout, proc.stderr
+            # Child unkillable (e.g. D-state): return safe strings, never
+            # the raw pipe objects.
+            stdout, stderr = "", ""
         return -1, stdout, stderr, True
 
 
