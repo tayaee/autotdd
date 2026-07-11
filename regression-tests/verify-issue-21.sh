@@ -10,6 +10,10 @@ set -uo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 INSTALL_SH="$REPO_ROOT/install.sh"
 
+# 실 HOME(가짜 HOME이 아닌, 이 스크립트를 실행하는 호스트의 진짜 HOME) —
+# 아래 fake-HOME 설치 실험이 여기를 건드리지 않는지 스냅샷 비교로 검증한다.
+REAL_HOME_SKILLS="$HOME/.claude/skills"
+
 FAIL=0
 CLEANUP=()
 
@@ -88,8 +92,22 @@ if [ -f "$INSTALL_SH" ] && [ -x "$INSTALL_SH" ]; then
     CLEANUP+=("$fake_home")
     mkdir -p "$fake_home/.claude/skills"
 
-    # 1차 실행
-    if HOME="$fake_home" bash "$INSTALL_SH" > "$fake_home/run1.log" 2>&1; then
+    # 실 HOME 오염 방지 스냅샷 — fake-HOME 설치 실험 전, 대상 4개 항목의
+    # 상태(부재/inode+mtime)를 기록해 뒀다가 실험 후 동일한지 assert한다.
+    declare -A real_snapshot
+    for skill in autoqa autofix autodev autoqafix; do
+        p="$REAL_HOME_SKILLS/$skill"
+        if [ -e "$p" ] || [ -L "$p" ]; then
+            real_snapshot["$skill"]="$(stat -c '%i:%Y' "$p" 2>/dev/null || echo "?")"
+        else
+            real_snapshot["$skill"]="ABSENT"
+        fi
+    done
+
+    # 1차 실행 — exit code를 그 자리에서 rc1으로 캡처 (재실행으로 다시 얻지 않음)
+    rc1=0
+    HOME="$fake_home" bash "$INSTALL_SH" > "$fake_home/run1.log" 2>&1 || rc1=$?
+    if [ "$rc1" -eq 0 ]; then
         pass "install.sh 1차 실행 성공"
     else
         fail "install.sh 1차 실행 실패 — log: $(cat "$fake_home/run1.log")"
@@ -102,15 +120,15 @@ if [ -f "$INSTALL_SH" ] && [ -x "$INSTALL_SH" ]; then
         fi
     done
 
-    # 2차 실행 (idempotent)
-    if HOME="$fake_home" bash "$INSTALL_SH" > "$fake_home/run2.log" 2>&1; then
+    # 2차 실행 (idempotent) — exit code를 그 자리에서 rc2로 캡처
+    rc2=0
+    HOME="$fake_home" bash "$INSTALL_SH" > "$fake_home/run2.log" 2>&1 || rc2=$?
+    if [ "$rc2" -eq 0 ]; then
         pass "install.sh 2차 실행 성공 (idempotent)"
     else
         fail "install.sh 2차 실행 실패 (idempotent 위반) — log: $(cat "$fake_home/run2.log")"
     fi
-    # 2차 실행도 에러 코드가 동일해야 (둘 다 0)
-    rc1="$(HOME="$fake_home" bash "$INSTALL_SH" >/dev/null 2>&1; echo $?)"
-    rc2="$(HOME="$fake_home" bash "$INSTALL_SH" >/dev/null 2>&1; echo $?)"
+    # 1차/2차 exit code 동일 검사 — rc1/rc2는 위에서 이미 캡처됐으므로 재실행 불필요
     if [ "$rc1" = "$rc2" ]; then
         pass "install.sh 1차/2차 exit code 동일 ($rc1)"
     else
@@ -140,13 +158,20 @@ if [ -f "$INSTALL_SH" ] && [ -x "$INSTALL_SH" ]; then
         fi
     done
 
-    # 정리: 가짜 HOME의 .claude/skills/<skill>은 실제 호스트 HOME 오염이 아니어야 함
-    real_home_skills="${HOME:-$HOME}/.claude/skills"
+    # 실 HOME 오염 검증 — 설치 전 스냅샷과 설치 후 상태를 비교해 실제로
+    # 아무것도 바뀌지 않았음을 assert한다 (예전엔 ':' no-op만 실행하는
+    # 빈 껍데기였음 — issue-34).
     for skill in autoqa autofix autodev autoqafix; do
-        if [ -e "$real_home_skills/$skill" ]; then
-            # 실제 HOME에 같은 이름이 있어도, 그것이 방금 만든 게 아니면 OK.
-            # 이 테스트는 "가짜 HOME만 변경됐는지" 확인한다.
-            :
+        p="$REAL_HOME_SKILLS/$skill"
+        if [ -e "$p" ] || [ -L "$p" ]; then
+            after="$(stat -c '%i:%Y' "$p" 2>/dev/null || echo "?")"
+        else
+            after="ABSENT"
+        fi
+        if [ "$after" = "${real_snapshot[$skill]}" ]; then
+            pass "실 HOME 오염 없음: $skill 상태 불변 (${real_snapshot[$skill]})"
+        else
+            fail "실 HOME 오염 발생: $skill 상태 변경 (before=${real_snapshot[$skill]} after=$after)"
         fi
     done
 fi
