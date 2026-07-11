@@ -36,3 +36,21 @@ agent-tier: local-ok
 
 `regression-tests/verify-issue-21.sh` 작성: 위 전부. HOME을 임시 디렉토리로
 바꿔 install.sh의 symlink 동작을 검증(실 HOME 오염 금지).
+
+## 구현 결과
+
+- **구현 완료 일시**: 2026-07-11T18:03:25+0000
+- **변경 파일**:
+  `.claude/skills/autoqa/SKILL.md` (트리거 /autoqa 신설),
+  `.claude/skills/autofix/SKILL.md` (트리거 /autofix 신설),
+  `.claude/skills/autodev/SKILL.md` (트리거 /autodev 신설),
+  `.claude/skills/autoqafix/SKILL.md` (트리거 /autoqafix — 엔진 폴더에 동거),
+  `install.sh` (repo 루트, 4종 symlink 설치 + idempotent),
+  `regression-tests/verify-issue-21.sh` (frontmatter·본문 계약·symlink 검증).
+- **계획과 차이**: 없음. 3개 트리거 폴더는 비어 있는 채로 두고 SKILL.md만
+  두는 형태이며, install.sh는 그 빈 폴더까지 같이 symlink한다 (해당 폴더가
+  git 추적되므로 실제 존재함이 보장됨).
+- **검증 결과**: verify-issue-21.sh ALL PASS (13 PASS, 0 FAIL).
+  전체 회귀 테스트 26/26 PASS. ruff F841×4는 사전 존재 잔여
+  (issue-20/28에서 누적; 이번 변경의 신규 Python 코드는 0줄이라 추가 회귀 없음).
+  pyright-full 0 errors. compileall PASS.
