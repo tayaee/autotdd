@@ -22,7 +22,6 @@ import argparse
 import json
 import os
 import shutil
-import socket
 import sys
 from pathlib import Path
 
@@ -172,12 +171,23 @@ def check_lock(d: Doctor, repo: Path) -> None:
 
 
 def check_skills(d: Doctor) -> None:
-    """⑦ ~/.claude/skills/{autotdd,tdd2,acpd,tdd} 존재."""
+    """⑦ ~/.claude/skills/{autotdd,tdd2,acpd,tdd} 존재.
+
+    preflight(fix)가 이미 {autotdd,tdd2,acpd} 부재를 보고하므로
+    중복 회피: 위 3종은 OK 줄만 출력하고 부재 시 silent (preflight에 위임),
+    preflight와 겹치지 않는 tdd만 FAIL 계수. 4종 모두 정상일 때의
+    `OK 스킬 <name>` 4줄 출력은 그대로 유지한다 (진단 리포트 가독성 보존).
+    """
+    overlap = ("autotdd", "tdd2", "acpd")
     for skill in REQUIRED_SKILLS:
-        if (Path.home() / ".claude" / "skills" / skill).is_dir():
+        present = (Path.home() / ".claude" / "skills" / skill).is_dir()
+        if present:
             d.ok(f"스킬 {skill}")
-        else:
-            d.fail(f"스킬 {skill}", f"~/.claude/skills/{skill} 없음", "autotdd 설치 확인")
+            continue
+        # 부재: preflight가 이미 보고한 3종은 silent
+        if skill in overlap:
+            continue
+        d.fail(f"스킬 {skill}", f"~/.claude/skills/{skill} 없음", "autotdd 설치 확인")
 
 
 def run_pings(d: Doctor, names: list[str], wrapper_dir: Path) -> None:
