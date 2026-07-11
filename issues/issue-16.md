@@ -39,3 +39,13 @@ issue-15의 `dispatch` 스텁을 실구현으로 교체한다. 명세:
 
 `regression-tests/verify-issue-16.sh` 작성: 위 전부. 실 autotdd 호출 금지
 (fake-wrapper의 archive 모드가 성공을 모사).
+
+## 구현 결과
+
+**구현 완료 일시**: 2026-07-10
+**변경 파일**:
+- `.claude/skills/autoqafix/autofix.py` — `dispatch_stub` → 실구현 `dispatch(item, wrapper, stream, repo)`. FIXED 카운터 추가, `cwd`/`env` 파라미터 전달, `-agent-failed` 실패 기록, `git worktree prune` 복구
+- `.claude/skills/autoqafix/autoqafix_core.py` — `run_with_timeout`에 `cwd`/`env` 파라미터 추가, 프로세스 그룹 승급 SIGTERM→SIGKILL
+- `regression-tests/verify-issue-16.sh` — 4 시나리오 테스트 (archive/fail/hang/mixed)
+**계획과의 차이**: 없음
+**검증 결과**: ALL TESTS PASSED (4/4 시나리오)

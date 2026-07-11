@@ -19,6 +19,7 @@ import os
 import re
 import subprocess
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 import autoqafix_core as core
@@ -64,7 +65,7 @@ def ensure_worktree(repo: Path, worktree: Path) -> None:
     if worktree.exists():
         subprocess.run(
             ["git", "-C", str(worktree), "pull", "--rebase", "origin", "main"],
-            check=True, capture_output=True, text=True,
+            check=True, capture_output=True, text=True, timeout=30,
         )
         return
     worktree.parent.mkdir(parents=True, exist_ok=True)
@@ -239,10 +240,120 @@ def rename_to_manual(worktree: Path, item: Path) -> None:
     _git_or_die(worktree, "push", "origin", "HEAD:main")
 
 
-def dispatch_stub(item: Path, wrapper: str) -> None:
-    """issue-15 stub: emit one `DISPATCH` line per matched item. Real
-    archive dispatch arrives in issue-16."""
-    print(f"DISPATCH {item.stem} {wrapper}")
+def dispatch(item: Path, wrapper: str, stream: str, repo: Path) -> bool:
+    """Run the wrapper inside the agent worktree and judge success by
+    archive presence.
+
+    Returns ``True`` when the item file has been archived by the wrapper,
+    ``False`` on failure / timeout (the worktree is recovered and an
+    ``-agent-failed`` record is written).
+    """
+    # Extract the item number from the filename (``autofix-<N>`` or
+    # ``issue-<N>``).
+    stem = item.stem  # e.g. "autofix-3"
+    _, _, n = stem.partition("-")
+    if not n:
+        return False
+
+    wt = item.parent.parent  # worktree path (issues/ → worktree parent)
+    # Walk up until we find the worktree root (state_dir / "worktree").
+    # The worktree is at state_dir/worktree; items are at
+    # state_dir/worktree/issues/<stream>-<N>.md
+    # In a worktree, .git is a FILE (gitdir pointer), not a directory.
+    for ancestor in item.parents:
+        git_path = ancestor / ".git"
+        if git_path.is_file() or git_path.is_dir():
+            wt = ancestor
+            break
+
+    cmd = [
+        wrapper, "-p",
+        f"/autotdd {stream}-{n} worktree",
+    ]
+    timeout_sec = float(
+        os.environ.get("AUTOQAFIX_IMPL_TIMEOUT", "10800")
+    )
+
+    # Set FAKE_TARGET so fake-wrapper knows which item to archive.
+    env = dict(os.environ)
+    env["FAKE_TARGET"] = str(item)
+
+    rc, stdout, stderr, timed_out = core.run_with_timeout(
+        cmd, timeout_sec, cwd=wt, env=env,
+    )
+
+    # ── success path ──────────────────────────────────────────────
+    if not timed_out and rc == 0:
+        # Pull to pick up any archive moves the wrapper committed.
+        pull = core._git(wt, "pull", "--rebase", "origin", "main")
+        if pull.returncode != 0:
+            return False
+
+        archive_pattern = f"{stream}-{n}.md"
+        issues_dir = wt / "issues"
+        if not issues_dir.is_dir():
+            return False
+
+        # Check direct file first.
+        if (issues_dir / archive_pattern).is_file():
+            return False  # not archived yet
+
+        # Check archive/**/*.md.
+        for af in issues_dir.rglob("archive/**/*.md"):
+            if af.name == archive_pattern:
+                return True
+
+        return False
+
+    # ── failure / timeout path ────────────────────────────────────
+    # Capture item content BEFORE resetting the worktree.
+    try:
+        original_body = item.read_text(encoding="utf-8", errors="ignore")
+    except Exception:
+        original_body = ""
+
+    # Append 실패 기록 — BEFORE any git operations that might
+    # remove the item file or the worktree itself.
+    now = datetime.now(timezone.utc).isoformat()
+    if timed_out:
+        detail = f"timeout ({timeout_sec}s)"
+    else:
+        detail = f"exit {rc}"
+
+    # Last 3 lines of stderr.
+    last_lines = "\n".join(
+        stderr.strip().splitlines()[-3:]
+    ) if stderr.strip() else "(no stderr)"
+
+    record = f"- {now} {wrapper}: {detail}\n{last_lines}\n"
+
+    # Ensure ## agent 실패 기록 section exists.
+    body = original_body
+    if "## agent 실패 기록" not in body:
+        body += "\n## agent 실패 기록\n"
+
+    body += record
+    item.write_text(body)
+
+    # git mv to -agent-failed, commit, push — inside the worktree.
+    new_name = f"{stem}-agent-failed.md"
+    new_path = item.parent / new_name
+    rel_old = item.relative_to(wt)
+    rel_new = new_path.relative_to(wt)
+    _git_or_die(wt, "mv", str(rel_old), str(rel_new))
+    _git_or_die(wt, "add", str(rel_new))  # Stage the content change
+    _git_or_die(
+        wt, "commit", "-q",
+        "-m", f"{new_path.stem}: agent 실패 — {detail}",
+    )
+    _git_or_die(wt, "push", "origin", "HEAD:main")
+
+    # Recover worktree — prune AFTER pushing the -agent-failed record.
+    # git worktree prune must run from the main repo (the fixture),
+    # not from the worktree itself.
+    core._git(repo, "worktree", "prune")
+
+    return False
 
 
 def run(repo: Path, stream: str) -> int:
@@ -260,6 +371,7 @@ def run(repo: Path, stream: str) -> int:
     processed = 0  # dispatched + renamed-to-manual
     skipped = 0    # not-this-time skip (already-correct tier or wrong tier)
     stamped = 0    # newly-stamped items
+    fixed = 0      # items successfully archived by dispatch
 
     for item in items:
         selected, tiers = select_llm()
@@ -297,14 +409,15 @@ def run(repo: Path, stream: str) -> int:
             processed += 1
             continue
 
-        # ④ Match passed → dispatch (stub here).
-        dispatch_stub(item, selected)
+        # ④ Match passed → dispatch (real archive dispatch).
+        if dispatch(item, selected, stream, repo):
+            fixed += 1
         processed += 1
 
     print(
         f"처리: {processed}건, 건너뜀: {skipped}건, 스탬프 추가: {stamped}건"
     )
-    print("FIXED=0")
+    print(f"FIXED={fixed}")
     return 0
 
 

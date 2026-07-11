@@ -179,7 +179,12 @@ def state_dir(repo: Path) -> Path:
     return d
 
 
-def run_with_timeout(cmd: list[str], timeout_sec: float) -> tuple[int, str, str, bool]:
+def run_with_timeout(
+    cmd: list[str],
+    timeout_sec: float,
+    cwd: Path | str | None = None,
+    env: dict[str, str] | None = None,
+) -> tuple[int, str, str, bool]:
     """Run cmd, killing the whole process group/tree if it exceeds
     timeout_sec, so grandchildren die too (a plain proc.kill() would
     leave them running). POSIX: start the child in its own session and
@@ -191,6 +196,10 @@ def run_with_timeout(cmd: list[str], timeout_sec: float) -> tuple[int, str, str,
         popen_kwargs["start_new_session"] = True
     elif os.name == "nt":
         popen_kwargs["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP
+    if cwd is not None:
+        popen_kwargs["cwd"] = str(cwd)
+    if env is not None:
+        popen_kwargs["env"] = env
 
     proc = subprocess.Popen(
         cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, **popen_kwargs
@@ -200,13 +209,42 @@ def run_with_timeout(cmd: list[str], timeout_sec: float) -> tuple[int, str, str,
         return proc.returncode, stdout, stderr, False
     except subprocess.TimeoutExpired:
         if os.name == "posix":
+            # First try SIGTERM to allow graceful shutdown.
             try:
-                os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+                pgid = os.getpgid(proc.pid)
+                os.killpg(pgid, signal.SIGTERM)
+            except (ProcessLookupError, OSError):
+                pass
+            # Wait briefly for graceful shutdown.
+            try:
+                proc.wait(timeout=1)
+                # Process exited gracefully; drain output.
+                stdout, stderr = proc.communicate()
+                return -1, stdout, stderr, True
+            except subprocess.TimeoutExpired:
+                pass
+            # SIGTERM didn't work — escalate to SIGKILL.
+            try:
+                pgid = os.getpgid(proc.pid)
+                os.killpg(pgid, signal.SIGKILL)
+            except (ProcessLookupError, OSError):
+                pass
+            try:
+                proc.kill()
             except ProcessLookupError:
+                pass
+            # Wait for the process to exit.
+            try:
+                proc.wait(timeout=2)
+            except subprocess.TimeoutExpired:
                 pass
         else:
             subprocess.run(["taskkill", "/PID", str(proc.pid), "/T", "/F"])
-        stdout, stderr = proc.communicate()
+        # Drain remaining output.
+        try:
+            stdout, stderr = proc.communicate(timeout=2)
+        except subprocess.TimeoutExpired:
+            stdout, stderr = proc.stdout, proc.stderr
         return -1, stdout, stderr, True
 
 
