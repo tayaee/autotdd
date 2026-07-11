@@ -167,6 +167,11 @@ else
 fi
 
 # 8. 기본 실행(--ping 없음)은 ping을 하지 않는다
+# 범위 주석: 아래 grep의 $out_ok는 TEST 5에서 캡처한 "완전한 픽스처" 실행 결과의
+# 재사용이다. TEST 5는 deploy.sh + fake claudecli 셋업 후 doctor를 1회 돌려
+# `OK claudecli`를 포함한 정상 출력을 캡처한다; TEST 8은 그 캡처값에 "ping 결과
+# 라인(OK claudecli (<출력>) 등)"이 섞여 있지 않음을 검증한다. TEST 7이 $out_ping
+# 별도 캡처를 갖는 것과 대조되는 구조.
 if echo "$out_ok" | grep -q "OK claudecli ("; then
     fail "default run executed ping (found ping output without --ping)"
 else
