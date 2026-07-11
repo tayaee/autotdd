@@ -183,20 +183,61 @@ def check_skills(d: Doctor) -> None:
 def run_pings(d: Doctor, names: list[str], wrapper_dir: Path) -> None:
     """③' --ping: 후보 래퍼의 ping-<래퍼명> 실행 (크레딧 소모 경고 선출력)."""
     print("⚠ --ping: 실제 LLM 호출로 크레딧이 소모될 수 있습니다 — 진행합니다")
+    
+    if os.name == "nt":
+        exts = [".bat", ".ps1", ".sh"]
+    else:
+        exts = [".sh", ".bat", ".ps1"]
+        
     for name in names:
-        ping = wrapper_dir / f"ping-{name}.sh"
-        if not ping.is_file():
-            ping = WRAPPER_DEFAULT_DIR / f"ping-{name}.sh"
-        if not ping.is_file():
-            d.fail(f"ping-{name}", f"{ping} 없음", "autotdd 설치 확인")
+        ping_file = None
+        for ext in exts:
+            p = wrapper_dir / f"ping-{name}{ext}"
+            if p.is_file():
+                ping_file = p
+                break
+        if ping_file is None:
+            for ext in exts:
+                p = WRAPPER_DEFAULT_DIR / f"ping-{name}{ext}"
+                if p.is_file():
+                    ping_file = p
+                    break
+                    
+        if ping_file is None:
+            expected_ping = WRAPPER_DEFAULT_DIR / f"ping-{name}{exts[0]}"
+            d.fail(f"ping-{name}", f"{expected_ping} 없음", "autotdd 설치 확인")
             continue
-        rc, out, err, timed_out = core.run_with_timeout(["bash", str(ping)], 180)
+            
+        ext = ping_file.suffix
+        if ext == ".sh":
+            cmd_args = ["bash", str(ping_file)]
+            action_desc = f"bash {ping_file} 단독 실행으로 확인"
+        elif ext == ".bat":
+            cmd_args = ["cmd", "/c", str(ping_file)]
+            action_desc = f"cmd /c {ping_file} 단독 실행으로 확인"
+        elif ext == ".ps1":
+            cmd_args = ["powershell", "-ExecutionPolicy", "Bypass", "-File", str(ping_file)]
+            action_desc = f"powershell -ExecutionPolicy Bypass -File {ping_file} 단독 실행으로 확인"
+        else:
+            cmd_args = [str(ping_file)]
+            action_desc = f"{ping_file} 단독 실행으로 확인"
+            
+        try:
+            rc, out, err, timed_out = core.run_with_timeout(cmd_args, 180)
+        except Exception as e:
+            d.fail(
+                f"ping-{name}",
+                f"실행 실패 ({e})",
+                f"인터프리터가 존재하는지 확인하고 {ping_file}의 실행 권한을 확인하세요"
+            )
+            continue
+            
         if out.strip():
             print(out.strip())
         if err.strip():
             print(err.strip())
         if timed_out or rc != 0:
-            d.fail(f"ping-{name}", "응답 이상 (위 출력 참조)", f"bash {ping} 단독 실행으로 확인")
+            d.fail(f"ping-{name}", "응답 이상 (위 출력 참조)", action_desc)
 
 
 def main() -> int:
