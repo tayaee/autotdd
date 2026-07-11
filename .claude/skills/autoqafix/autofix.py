@@ -127,9 +127,7 @@ def enumerate_items(worktree: Path, stream: str) -> list[Path]:
 def select_llm() -> tuple[str | None, dict[str, str]]:
     """Run select-llm and parse AUTOQAFIX_WRAPPERS for tier lookups. Returns
     (selected_wrapper_name_or_None, {wrapper_name: tier})."""
-    spec = os.environ.get(
-        "AUTOQAFIX_WRAPPERS", "claudecli:paid,minimaxcli:paid,qwencli:local"
-    )
+    spec = os.environ.get("AUTOQAFIX_WRAPPERS") or "claudecli:paid,minimaxcli:paid,qwencli:local"
     tiers = parse_wrapper_spec(spec)
     forced = os.environ.get("AUTOQAFIX_WRAPPER")
     if forced:

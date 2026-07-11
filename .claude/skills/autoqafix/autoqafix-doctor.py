@@ -209,14 +209,17 @@ def main() -> int:
     args = parser.parse_args()
     repo = Path(args.repo).resolve()
 
-    spec = os.environ.get("AUTOQAFIX_WRAPPERS", WRAPPERS_DEFAULT)
+    spec = os.environ.get("AUTOQAFIX_WRAPPERS") or WRAPPERS_DEFAULT
     names = list(autofix.parse_wrapper_spec(spec))
     wrapper_dir = Path(os.environ.get("AUTOQAFIX_WRAPPER_DIR", str(WRAPPER_DEFAULT_DIR)))
 
     d = Doctor()
     check_preflight(d, repo)
-    check_wrappers(d, names, wrapper_dir)
-    check_usage_scripts(d, names)
+    if not names:
+        d.warn("AUTOQAFIX_WRAPPERS가 비어있음, 래퍼 검사 생략")
+    else:
+        check_wrappers(d, names, wrapper_dir)
+        check_usage_scripts(d, names)
     check_select_llm(d, names)
     check_deploy(d, repo)
     check_lock(d, repo)

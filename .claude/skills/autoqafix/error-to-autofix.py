@@ -22,7 +22,7 @@ def main():
     repo_path = Path(args.repo).resolve()
 
     # AUTOQAFIX_WRAPPERS 파싱
-    spec = os.environ.get("AUTOQAFIX_WRAPPERS", "claudecli:paid,minimaxcli:paid,qwencli:local")
+    spec = os.environ.get("AUTOQAFIX_WRAPPERS") or "claudecli:paid,minimaxcli:paid,qwencli:local"
     tiers = {}
     for entry in spec.split(","):
         entry = entry.strip()

@@ -140,7 +140,7 @@ def main() -> None:
 
     explain = "--explain" in sys.argv[1:]
 
-    spec = os.environ.get("AUTOQAFIX_WRAPPERS", DEFAULT_WRAPPERS)
+    spec = os.environ.get("AUTOQAFIX_WRAPPERS") or DEFAULT_WRAPPERS
     candidates = parse_candidates(spec)
 
     usage = {}
