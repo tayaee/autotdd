@@ -26,3 +26,20 @@ agent-tier: local-ok
 ## 검증
 
 `regression-tests/verify-issue-19.sh` 작성: 위 전부 (총 15초 이내).
+
+## 구현 결과
+
+- **구현 완료 일시**: 2026-07-11T01:20:00+09:00
+- **변경 파일**: `.claude/skills/autoqafix/role-loop.py`,
+  `autoqa-loop.{sh,ps1,bat}`, `autofix-loop.{sh,ps1,bat}`,
+  `autodev-loop.{sh,ps1,bat}`, `regression-tests/verify-issue-19.sh`
+- **계획과 차이**: issue-18(autoqafix-loop)이 archive에는 있으나 실제로는
+  미구현이라 "페이즈 로직 재사용"이 불가능 → role-loop.py에 간격 유지
+  로직(`wait_until_interval`)을 자체 구현, 추후 합성 루프가 재사용 가능하게
+  함수로 분리. 런처는 issue-14 패턴에 인자 전달(`"$@"`/`@args`/`%*`)을
+  추가해 `--interval`이 role-loop.py까지 전달되게 함
+- **검증 결과**: verify-issue-19.sh PASS (26/26, 총 6.2초 — 예산 15초 내).
+  전체 회귀 스위트 16/16 PASS. 최초 구현 시점(2026-07-11 오전)에는
+  verify-issue-15.sh가 main에서 이미 실패 중(issue-16의 step 9(b) 누락)이라
+  완료 기준 미충족으로 대기 → issue-16 재작업(커밋 49af40b)으로 해소 후
+  완료 처리.
