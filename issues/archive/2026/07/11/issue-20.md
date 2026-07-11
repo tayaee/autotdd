@@ -35,3 +35,17 @@ preflight(issue-10)의 상위 집합이다.
 ## 검증
 
 `regression-tests/verify-issue-20.sh` 작성: 위 전부.
+
+## 구현 결과
+
+- **구현 완료 일시**: 2026-07-11T01:14:00+09:00
+- **변경 파일**: `.claude/skills/autoqafix/autoqafix-doctor.py`,
+  `autoqafix-doctor.{sh,ps1,bat}`, `regression-tests/verify-issue-20.sh`
+- **계획과 차이**: 없음. 세부 판단 2건 — ① preflight는 실패 메시지만
+  반환하므로 항목 단위 OK는 role 단위(`OK preflight(qa)`)로, FAIL은
+  preflight 실패 메시지 1건당 `FAIL preflight(<role>)` 1줄로 계수.
+  ② `--ping`의 ping 스크립트는 `AUTOQAFIX_WRAPPER_DIR`에서 먼저 찾고
+  없으면 스킬의 `wrappers/`로 폴백 (테스트 주입과 실환경 모두 지원)
+- **검증 결과**: verify-issue-20.sh PASS (15/15, 2.5초).
+  전체 회귀 스위트 17/17 PASS. 구현 중 잡은 버그: `any(glob제너레이터)`가
+  내용이 아닌 제너레이터 객체를 평가해 deploy 부재를 OK로 오판 → 수정.
