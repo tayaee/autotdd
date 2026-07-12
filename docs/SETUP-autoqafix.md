@@ -73,7 +73,7 @@ Windows 머신에서 무인으로 돌릴 때:
 - **`/autofix`** — autofix 1회
 - **`/autodev`** — dev 1회
 - **`/autotdd`** — `tdd2 + acpd`를 한 이슈에 대해 연속 실행 (구현 + archive + push)
-- **`/autorevfix`** — 다중 모델 리뷰 사이클 (구현 → 다중 리뷰 → 종합 → 재구현)
+- **`/autotddreview`** — 다중 모델 리뷰 사이클 (구현 → 다중 리뷰 → 종합 → 재구현)
 
 ## 6. 운영 규약 요약
 

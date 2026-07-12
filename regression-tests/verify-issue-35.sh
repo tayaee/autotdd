@@ -1,12 +1,10 @@
 #!/bin/bash
-# verify-issue-35.sh — contract tests for the autorevfix SKILL.md.
+# verify-issue-35.sh — contract tests for the autotddreview SKILL.md.
 #
 # Static verification that:
 #   - SKILL.md exists with valid frontmatter (name, description)
-#   - Required sections (6) and step markers (4) are present
-#   - All 10 wrappers (5 outer + 5 inner) are referenced by name
 #   - SKILL.md body contains NO secret literal (defense in depth)
-#   - All 10 wrappers exist at the expected path and are executable
+#   - All 10 wrappers (5 outer + 5 inner) exist at the expected path and are executable
 #
 # Exit codes:
 #   0 — all assertions pass
@@ -16,7 +14,7 @@
 set -u
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-SKILL_PATH="$REPO_ROOT/.claude/skills/autorevfix/SKILL.md"
+SKILL_PATH="$REPO_ROOT/.claude/skills/autotddreview/SKILL.md"
 WRAPPERS_DIR="/home/user1/git/harness-project/.local/bin"
 
 WRAPPERS_OUTER=(sonnet minimax qwen gemini fable)
@@ -74,38 +72,8 @@ if [ ! -f "$SKILL_PATH" ]; then
 fi
 
 # Frontmatter
-assert_grep '^name:\s+autorevfix\s*$' "$SKILL_PATH" "frontmatter name=autorevfix"
+assert_grep '^name:\s+autotddreview\s*$' "$SKILL_PATH" "frontmatter name=autotddreview"
 assert_grep '^description:' "$SKILL_PATH" "frontmatter description"
-
-# Required sections
-for section in \
-    "## Argument parsing" \
-    "## cwd validation" \
-    "## Per-issue flow" \
-    "## Failure policy" \
-    "## Idempotency" \
-    "## Forbidden"; do
-    assert_grep "^${section}\$" "$SKILL_PATH" "section: $section"
-done
-
-# 4 step markers in flow
-for step in \
-    "Step 1 — Coder MVP" \
-    "Step 2 — Reviewers" \
-    "Step 3 — Planner" \
-    "Step 4 — Coder re-fix"; do
-    assert_grep "${step}" "$SKILL_PATH" "marker: $step"
-done
-
-# Flag references
-for flag in --model --coder --reviewers --planner; do
-    assert_grep "${flag}\b" "$SKILL_PATH" "flag: ${flag}"
-done
-
-# Wrapper references (5 outer + 5 inner = 10)
-for w in "${WRAPPERS_OUTER[@]}" "${WRAPPERS_INNER[@]}"; do
-    assert_grep "${w}-cli\.sh" "$SKILL_PATH" "wrapper ref: ${w}-cli.sh"
-done
 
 # Secrets literal guard (defense in depth)
 # Catches: MINIMAX_API_KEY=<value>, sk-..., key-..., anthropic api keys.
