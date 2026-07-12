@@ -109,7 +109,7 @@ and is non-empty.
 If not done:
 
 ```bash
-<P>-cli.sh -p "issues/issue-<N>-code-review*.md 파일을 평가하여 must-fix, good-to-fix, reject으로 분류하고, must-fix, good-to-fix에 대해 to-issues 스킬로 수정 계획 issues/issue-<N>-feedback-review-by-<P-version>.md 파일을 작성해"
+<P>-cli.sh -p "issues/issue-<N>-code-review*.md 파일을 평가하여 must-fix, good-to-fix, reject으로 분류하고, must-fix, good-to-fix에 대해 to-tickets 스킬로 수정 계획 issues/issue-<N>-feedback-review-by-<P-version>.md 파일을 작성해"
 ```
 
 If 1+ reviewer files are missing (reviewer failed in step 2), prepend a

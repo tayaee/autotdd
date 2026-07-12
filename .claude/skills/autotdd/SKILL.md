@@ -62,7 +62,7 @@ either way of confirming is fine.)
   > neither exists), and `tdd2` depends on it. This package doesn't
   > know where you originally got it from, so it can't hand you an
   > install command — but you already have several of its sibling
-  > skills installed (`ask-matt`, `grill-me`, `to-issues`, `to-prd`,
+  > skills installed (`ask-matt`, `grill-me`, `to-tickets`, `to-spec`,
   > `code-review`, `implement`, etc., all under `~/.claude/skills/`):
   > install `tdd` from wherever those came from, the same way, so it
   > ends up at `~/.claude/skills/tdd/SKILL.md` (or
