@@ -43,11 +43,12 @@ else
     fail "autotdd: to-tickets/to-spec 예시 누락"
 fi
 
-# ----- 4. README: docs/spec-*.md 규약 + 새 워크플로우 안내 -----
-if grep -q 'docs/spec-\*\.md' "$README"; then
-    pass "README: docs/spec-*.md 규약 존재"
+# ----- 4. README: docs/spec/spec-*.md 규약 + 새 워크플로우 안내 -----
+# (경로 형태는 issue-37에서 플랫형 docs/spec-*.md → 중첩형으로 확정)
+if grep -q 'docs/spec/spec-\*\.md' "$README"; then
+    pass "README: docs/spec/spec-*.md 규약 존재"
 else
-    fail "README: docs/spec-*.md 규약 누락"
+    fail "README: docs/spec/spec-*.md 규약 누락"
 fi
 if grep -q '/to-spec' "$README" && grep -q '/to-tickets' "$README"; then
     pass "README: /to-spec·/to-tickets 안내 존재"

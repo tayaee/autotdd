@@ -61,8 +61,8 @@ npx skills add tayaee/autotdd -g
 
 ## Quickstart
 
-* Use `/grill-with-docs` to create `issues/issue-*.md` (and optionally `docs/adr/adr-*.md`, `docs/sdd/sdd-*.md`, `docs/spec-*.md`).
-* Use `/to-spec` to write specs as `docs/spec-*.md`; `/to-tickets` writes tickets as `issues/issue-*.md` (legacy-compatible paths).
+* Use `/grill-with-docs` to create `issues/issue-*.md` (and optionally `docs/adr/adr-*.md`, `docs/sdd/sdd-*.md`, `docs/spec/spec-*.md`).
+* Use `/to-spec` to write specs as `docs/spec/spec-*.md`; `/to-tickets` writes tickets as `issues/issue-*.md` (legacy-compatible paths).
 * Add `deploy.{bat,ps1,sh}` (or `deploy-to-env.{bat,ps1,sh}`) to the target repo yourself, accepting `--env <env>`, to deploy your solution to the `dev` environment. `acpd` calls it as `deploy.sh --env dev`; it never creates this file for you.
 * Use `/autotdd` or `/autotdd [issue #s]` to repeat `/tdd2` (implementation) and `/acpd` (`git add -u`, `git commit`, `git push`, then `deploy.{bat,ps1,sh}` or `deploy-to-env.{bat,ps1,sh}` `--env dev` if the target repo has one).
 
