@@ -116,20 +116,51 @@ Failure of one reviewer does NOT stop the others (continue-with-partial). When a
 
 **Done check**: `issues/issue-N__TYPE-refix-plan.md` exists and is non-empty.
 
-If not done:
-The execution session synthesizes the review files inline:
-Read all available review files matching `issues/issue-N__TYPE-code-review__BY-*.md`. Categorize findings into `must-fix`, `good-to-fix`, and `reject`. Then, use the `to-tickets` skill to write the fix plan to `issues/issue-N__TYPE-refix-plan.md`.
+If not done, the execution session runs inline, in this order:
+
+1. **수집**: Read all available review files matching
+   `issues/issue-N__TYPE-code-review__BY-*.md`.
+2. **형식 게이트**: finding에 증거 3요소(파일:라인+코드 인용 / 실패
+   시나리오 / 확인 방법)가 하나라도 없으면 내용 불문 기계적으로
+   `reject` (사유: "증거 미비"). 근거 제시 책임은 리뷰어에게 있다.
+3. **분류**: 게이트 통과 finding을 `must-fix` / `good-to-fix` /
+   `reject`로 분류.
+4. **실질 재검증 (must-fix 한정)**: must-fix 승격 후보는 인용된
+   파일:라인을 직접 열어 ① **인용이 실재**하고 ② **주장이 성립**하는지
+   확인한 뒤에만 승격한다. 확인 실패 → 근거를 남기고 reject 또는
+   good-to-fix로 강등 (사유: "재검증 실패"). good-to-fix는 파킹되어
+   사람 눈을 거치므로 재검증을 생략한다. (비용 비대칭: must-fix 1건은
+   무인 `/autotdd` 풀사이클을 발동하므로 오판 비용이 재검증 비용보다
+   크다.)
+5. **파생 이슈 생성** (`to-tickets` 스킬 활용, 파일명은 규약 v2):
+   - must-fix → `issues/issue-<신번호>-fixing-<N>.md` (pending)
+   - good-to-fix → `issues/issue-<신번호>-fixing-<N>__STATE-later.md`
+     (파킹 — 사람이 STATE 태그를 지워 승격할 때까지 파이프라인 제외)
+   - 채번: issues/ + issues/archive/ 전체에서 **최대 번호 + 1** (번호
+     재사용 금지). 생성 직전 기존 번호를 재확인한다.
+   - 본문 **계보** 필수: 원본 이슈 번호, 출처 리뷰 파일명, 해당 finding
+     인용, 재검증 결과.
+6. **refix-plan 산출**: `issues/issue-N__TYPE-refix-plan.md` — 리뷰어별
+   finding 수, 분류 결과, reject 사유("증거 미비"/"재검증 실패" 구분),
+   생성된 파생 이슈 목록. (Step 3의 done check가 이 파일 기준.)
+7. **review-stats JSON 기록** (issue-43 스코어보드 CLI의 기초 자료):
+   같은 판정 데이터를 `issues/issue-N__TYPE-review-stats.json`으로
+   기록한다. 필수 필드 — `issue`(번호), `date`(ISO 8601),
+   `reviewers`(리뷰어 base명 key별: `findings` / `gate_rejected` /
+   `verify_rejected` / `must_fix` / `good_to_fix`), `derived`(생성된
+   파생 이슈 파일명 목록). `.json`은 `.md` 열거에 걸리지 않으므로
+   파이프라인에 중립 — 집계는 CLI 몫, 여기서는 기록만.
 
 If any reviewer files are missing (from failed reviewers in Step 2), prepend a note in the planning context: "Note: The reviewer file for <failed-reviewer> was unavailable. Synthesize from the surviving files."
 
 ### Step 4 — Coder re-fix (skip if done)
 
-**Done check**: every `issues/issue-N__TYPE-*.md` file (code-review들과 refix-plan) has been moved to `issues/archive/<YYYY>/<MM>/<DD>/` — 파일명 그대로, `git mv`로.
+**Done check**: every `issues/issue-N__TYPE-*` file (code-review들, refix-plan, review-stats.json) has been moved to `issues/archive/<YYYY>/<MM>/<DD>/` — 파일명 그대로, `git mv`로.
 
 If not done:
 The execution session runs:
-- Process all must-fix and good-to-fix tickets created from `issues/issue-N__TYPE-refix-plan.md` by calling `/autotdd` (passing `worktree` if the original run specified `worktree`).
-- After completing all tickets, archive the review files `issues/issue-N__TYPE-code-review__BY-*.md` and `issues/issue-N__TYPE-refix-plan.md` to `issues/archive/YYYY/MM/DD/` using `aacp`.
+- Step 3가 생성한 파생 이슈 중 **pending인 것만** (`issues/issue-*-fixing-N.md` — 태그 없는 파일) `/autotdd`로 처리한다 (passing `worktree` if the original run specified `worktree`). `__STATE-later` 파킹 파생 이슈는 **건드리지 않는다** — 사람이 승격할 때까지 대기.
+- After completing, archive `issues/issue-N__TYPE-code-review__BY-*.md`, `issues/issue-N__TYPE-refix-plan.md`, `issues/issue-N__TYPE-review-stats.json` to `issues/archive/YYYY/MM/DD/` using `aacp`.
 
 ## Failure policy
 
