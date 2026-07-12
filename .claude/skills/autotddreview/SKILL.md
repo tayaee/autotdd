@@ -66,13 +66,49 @@ The execution session runs `/autotdd <N>` inline (or `/autotdd <N> worktree` if 
 
 **Done check** (per reviewer `X`): `issues/issue-N__TYPE-code-review__BY-<X>.md` exists and is non-empty (where `<X>` is the base model name, or `self` for self-review — `__BY-` 값은 항상 래퍼 base명이며 버전명은 쓰지 않는다).
 
+#### 리뷰어 프롬프트 — 4부 구조 (외부 래퍼·셀프 리뷰 공통)
+
+실행 세션이 아래 4부를 조립해 하나의 프롬프트로 전달한다. 목적은 추측
+리뷰의 구조적 차단 — 리뷰 사이클은 티켓 수백 개에 걸쳐 반복되므로 한
+번에 다 찾을 필요가 없고, 확실한 것만 잡는 게 중요하다.
+
+**① 환경 사실**:
+- 대상 리포의 Python 버전을 `.python-version`에서, 없으면
+  `pyproject.toml`의 `requires-python`에서 읽어 프롬프트에 명시한다.
+  준수 수준 판정: 버전이 3.12 미만이면 그 버전 준수를 요구하고, 3.12
+  초과면 언어 준수 수준을 3.12로 캡한다. (둘 다 없으면 "버전 정보 없음
+  — 문법 세대 지적 금지"라고 명시.)
+- "이 코드는 이미 ruff+pyright+pytest+회귀 스크립트를 통과한 상태"임을
+  알린다.
+
+**② 리뷰 범위**: 기계가 못 잡는 것만 — 로직 오류, 스펙(이슈 요구사항)
+불일치, 보안(OWASP Top 10 렌즈), 동시성·경계조건. **ruff/pyright가 잡는
+스타일·타입 지적은 보고 금지** (파이프라인의 다른 단계 몫).
+
+**③ 증거 계약**: finding마다 필수 3요소 —
+- `파일:라인` + 실제 **코드 인용**
+- 문제가 재현되는 구체 **실패 시나리오** (입력/상태 → 잘못된 결과)
+- **확인 방법** (실행·재현 절차)
+
+그리고 명시: "확인하지 못한 것은 쓰지 마라. 리뷰 사이클은 반복되므로
+이번에 다 찾을 필요 없다 — **누락보다 오판이 비싸다**."
+
+**④ 구조화 finding 포맷**: **자유 산문 금지** — finding당 고정 필드
+(파일:라인 / 코드 인용 / 실패 시나리오 / 확인 방법 / 심각도 제안
+`must-fix`|`good-to-fix`)를 표 또는 고정 섹션으로 강제. Step 3 플래너가
+기계적으로 판정할 수 있는 형태여야 한다.
+
+공통 유지 지시: 본문 첫 줄에 자기 모델명(버전 포함)을 기입.
+
+#### 실행
+
 For each undone reviewer, launch:
 - **External Reviewers**: For each reviewer `<X>`, launch in parallel:
   ```bash
-  /home/user1/git/harness-project/.local/bin/<X>-cli.sh -p "issue-<N>의 구현에 대해 코드 품질 감사를 수행하여 issues/issue-<N>__TYPE-code-review__BY-<X>.md 파일을 작성해. 본문 첫 줄에 자기 모델명(버전 포함)을 기입해야 함."
+  /home/user1/git/harness-project/.local/bin/<X>-cli.sh -p "<위 4부 구조로 조립한 프롬프트 — 산출 파일: issues/issue-<N>__TYPE-code-review__BY-<X>.md>"
   ```
 - **Self-Review**: If no reviewers were specified, launch a subagent in a new context (do not review inline in the same conversation) to write:
-  `issues/issue-N__TYPE-code-review__BY-self.md`. The prompt must instruct the subagent to perform a code quality audit of issue N's implementation, and write the report to `issues/issue-N__TYPE-code-review__BY-self.md`, including its model name (with version) in the first line of the file.
+  `issues/issue-N__TYPE-code-review__BY-self.md`. 셀프 리뷰 서브에이전트의 프롬프트에도 위 4부 구조를 동일하게 적용한다 (모델명 첫 줄 기입 포함).
 
 Failure of one reviewer does NOT stop the others (continue-with-partial). When all parallel launches return, verify each output file exists and is non-empty. Note any failures for step 3.
 
