@@ -24,26 +24,33 @@ duplicating them.
 
 ## Stream conventions
 
-Two issue streams are recognized:
+파일명 규약의 단일 정본은 `docs/spec/spec-issue-filenames.md`다
+(문법 상세·엄격성 규칙·가드의 정확한 패턴 표는 그 문서를 따른다). 요약:
 
-- **Stream IDs**: `issue-<N>` and `autofix-<N>`. Bare-number arguments
-  (e.g., `tdd2 22`) default to the `issue` stream.
-- **Argument parsing**: `tdd2 issue-N`, `tdd2 autofix-N`, `tdd2 N` all
-  work — the first two specify the stream explicitly.
-- **Enumeration glob**: only files whose names match
-  `<stream>-<digits>.md` exactly are listed as pending. Suffix files
-  like `issue-3-later.md`, `issue-3-manual.md`, `issue-3-agent-failed.md`
-  (and the same `-later` / `-manual` / `-agent-failed` variants for the
-  `autofix` stream) are excluded from "remaining issues" — they're
-  hand-parked exceptions, not work to be picked up.
+- **문법**: `<stream>-<N>[-<slug>][__<KEY>-<value>]*.md` — stream은
+  `issue`/`autofix`, 슬러그는 영문자로 시작하는 소문자 kebab(사람용
+  라벨, 판정 불관여), KEY는 대문자 `TYPE`/`STATE`/`BY`만(이 순서).
+- **판정 규칙**: `__TYPE-`도 `__STATE-`도 없으면 pending(작업 대상).
+  하나라도 있으면 제외 — `__STATE-later`/`__STATE-manual`/
+  `__STATE-agent-failed`는 파킹(사람이 태그를 지우면 승격),
+  `__TYPE-*`는 산출물(영원히 작업 아님).
+- **ID 추출**: 정규식 `^(issue|autofix)-([0-9]+)` — 슬러그·태그가
+  있어도 번호는 이걸로 뽑는다.
+- **예약 슬러그 가드**: 태그 없는 파일이 구(v1) 규약 구조에 해당하면
+  (spec 문서의 가드 절 — 정확·꼬리 매치 패턴 표 참조) pending으로
+  취급하지 말고 "harness-project의 `upgrade-issue-filenames.sh`를
+  실행하라"는 안내와 함께 중단한다.
 - **Regression script path**: `regression-tests/verify-<stream>-<N>.sh`
-  (e.g., `verify-issue-22.sh`, `verify-autofix-3.sh`).
+  (e.g., `verify-issue-22.sh`, `verify-autofix-3.sh`) — 슬러그·태그는
+  스크립트명에 포함하지 않는다.
 
 ## Argument parsing
 
 `tdd2 issue-280`, `tdd2 issue 280`, `tdd2 280` are all the same thing:
-extract the digits from the first token, normalize to `#`, read
-`issues/issue-#.md`.
+extract the digits from the first token, normalize to `#`, then resolve
+the file: `issues/issue-#.md` if it exists, otherwise the unique
+tag-less `issues/issue-#-<slug>.md`. 태그 없는 후보가 같은 번호에 2개
+이상이면 중복 오류로 중단.
 
 ## No issue number given — resume or pick, then ask
 
@@ -57,7 +64,13 @@ Run when the user says `/tdd2` with no number:
 
    ```bash
    for f in issues/issue-*.md; do
-     n=$(basename "$f" .md | sed 's/^issue-//')
+     base=$(basename "$f" .md)
+     [[ "$base" == *__* ]] && continue   # 태그 파일(산출물·파킹) 제외
+     rest="${base#issue-}"; slug="${rest#*-}"; [ "$slug" = "$rest" ] && slug=""
+     case "$slug" in later|manual|agent-failed)
+       echo "구 규약 파일 감지: $f — harness-project의 upgrade-issue-filenames.sh 실행 요망" >&2; exit 1 ;;
+     esac   # 산출물 꼬리 패턴 등 나머지 가드는 spec 문서의 표를 적용
+     n="${rest%%-*}"
      if grep -q '\*\*구현 완료 일시\*\*: *(미정)' "$f" \
         && [ -f "regression-tests/verify-issue-${n}.sh" ]; then
        echo "$n"
@@ -73,7 +86,9 @@ Run when the user says `/tdd2` with no number:
 
    ```bash
    for f in issues/issue-*.md; do
-     n=$(basename "$f" .md | sed 's/^issue-//')
+     base=$(basename "$f" .md)
+     [[ "$base" == *__* ]] && continue   # 태그 파일(산출물·파킹) 제외 — 가드는 위와 동일
+     n=$(echo "$base" | sed -E 's/^issue-([0-9]+).*/\1/')
      grep -q '\*\*구현 완료 일시\*\*: *(미정)' "$f" \
        && [ ! -f "regression-tests/verify-issue-${n}.sh" ] \
        && echo "$n"

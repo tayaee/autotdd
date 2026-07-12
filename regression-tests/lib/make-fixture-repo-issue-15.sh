@@ -18,7 +18,7 @@ echo "human-main-tree-untouched" > "$work/UNTRACKED_DUMMY"
 
 # -- autofix items -------------------------------------------------------------
 
-# ① un-stamped → wrapper returns TIER: manual → must rename to -manual
+# ① un-stamped → wrapper returns TIER: manual → must rename to __STATE-manual
 cat > "$work/issues/autofix-1.md" <<'EOF'
 # autofix-1: 수동 분류 기대
 reported-by: harness-test@dummy 2026-07-10T12:00:00Z
@@ -29,11 +29,11 @@ EXPECT-TIER-MANUAL
 un-stamped item whose tier judgement must come back manual.
 
 ## 요구사항
-1. wrapper가 TIER: manual 응답 → 원격 autofix-1.md가 autofix-1-manual.md로 rename
+1. wrapper가 TIER: manual 응답 → 원격 autofix-1.md가 autofix-1__STATE-manual.md로 rename
 2. DISPATCH 라인 미출력
 
 ## 승인 기준
-- [ ] git pull 후 autofix-1-manual.md가 존재하고 autofix-1.md가 부재
+- [ ] git pull 후 autofix-1__STATE-manual.md가 존재하고 autofix-1.md가 부재
 EOF
 
 # ② un-stamped → wrapper returns TIER: local-ok → stamp + DISPATCH
@@ -72,18 +72,18 @@ already-stamped paid-only item.
 EOF
 
 # ④ suffix variants — must be filtered out before any tier logic runs.
-cat > "$work/issues/autofix-4-later.md" <<'EOF'
-# autofix-4-later: 사람 보류
+cat > "$work/issues/autofix-4__STATE-later.md" <<'EOF'
+# autofix-4__STATE-later: 사람 보류
 ## 배경
 later
 EOF
-cat > "$work/issues/autofix-5-manual.md" <<'EOF'
-# autofix-5-manual: 사람 담당
+cat > "$work/issues/autofix-5__STATE-manual.md" <<'EOF'
+# autofix-5__STATE-manual: 사람 담당
 ## 배경
 manual
 EOF
-cat > "$work/issues/autofix-6-agent-failed.md" <<'EOF'
-# autofix-6-agent-failed: 직전 시도 실패
+cat > "$work/issues/autofix-6__STATE-agent-failed.md" <<'EOF'
+# autofix-6__STATE-agent-failed: 직전 시도 실패
 ## 배경
 agent-failed
 EOF

@@ -14,9 +14,11 @@ issue-3 ~ issue-23의 공통 설계 근거. 각 이슈는 이 문서와 `CONTEXT
 
 - 사람 스트림: `issues/issue-#.md`, commit 접두사 `issue-#:`
 - agent 스트림: `issues/autofix-#.md`, commit 접두사 `autofix-#:`
-- 번호는 스트림별 독립, 접미사 불문 스트림 내 유일
-- 상태 접미사: 없음(기계 대상) / `-manual`(사람 몫 판정) / `-agent-failed`(실패 대기) /
-  `-later`(사람이 미룸). 전이는 rename + commit + push
+- 번호는 스트림별 독립, 태그·슬러그 불문 스트림 내 유일
+- 상태 태그(파일명 규약 v2 — 정본: `docs/spec/spec-issue-filenames.md`):
+  없음(기계 대상) / `__STATE-manual`(사람 몫 판정) /
+  `__STATE-agent-failed`(실패 대기) / `__STATE-later`(사람이 미룸).
+  전이는 rename + commit + push
 
 ## 항목 파일에 들어가는 기계 판독 줄
 
@@ -71,12 +73,12 @@ frequency: <횟수> (<구간 시작> ~ <구간 끝>)
 
 1. 전용 agent worktree(`~/.cache/autoqafix/<클론ID>/worktree`, main 추적)에서만 git
    조작. 사람 main tree는 절대 건드리지 않음
-2. pull → 접미사 없는 항목 열거(오름차순) → 항목마다 LLM 재선정 → agent-tier 매칭 →
+2. pull → 태그 없는 항목 열거(오름차순) → 항목마다 LLM 재선정 → agent-tier 매칭 →
    `<래퍼> -p "/autotdd <id> worktree"` (구현 타임아웃 3시간, 초과 시 트리 강제 종료)
 3. 스탬프 없는 항목(사람 작성)은 유료 래퍼가 1회 tier 판정 후 스탬프 줄 추가 commit.
-   `manual` 판정 → `-manual` rename+push
+   `manual` 판정 → `__STATE-manual` rename+push
 4. 성공 판정 = 항목 파일이 archive로 이동했는가(pull 후 확인). 실패/타임아웃 →
-   `## agent 실패 기록`에 `- <ISO8601> <래퍼>: <요지>` 추가 → `-agent-failed`
+   `## agent 실패 기록`에 `- <ISO8601> <래퍼>: <요지>` 추가 → `__STATE-agent-failed`
    rename → 해당 파일만 add·commit·push → 다음 항목. 승급 없음, 정체는 사람 개입
 5. autodev = 같은 엔진, `--stream issue` (issue-#.md 담당)
 

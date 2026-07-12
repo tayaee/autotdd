@@ -181,13 +181,13 @@ def main():
             all_success = False
             continue
 
-        # manual 처리
+        # manual 처리 (파일명 규약 v2: __STATE-manual 태그 — docs/spec/spec-issue-filenames.md)
         if tier == "manual":
             try:
-                new_filename = f"autofix-{n}-manual.md"
+                new_filename = f"autofix-{n}__STATE-manual.md"
                 new_filepath = filepath.parent / new_filename
                 core._git(repo_path, "mv", str(filepath.relative_to(repo_path)), str(new_filepath.relative_to(repo_path)))
-                core._git(repo_path, "commit", "-q", "-m", f"autofix-{n}-manual: {summary}")
+                core._git(repo_path, "commit", "-q", "-m", f"autofix-{n}__STATE-manual: {summary}")
                 core._git(repo_path, "push")
             except Exception:
                 all_success = False

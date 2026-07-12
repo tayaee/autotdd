@@ -15,16 +15,22 @@ for each issue number.
 
 ## Stream conventions
 
-Two issue streams are orchestrated:
+파일명 규약의 단일 정본은 `docs/spec/spec-issue-filenames.md`다. 요약:
 
 - **Stream IDs**: `issue-<N>` and `autofix-<N>`. Bare-number arguments
   (e.g., `autotdd 22`) default to the `issue` stream.
-- **Enumeration glob**: only files matching `<stream>-<digits>.md`
-  exactly are listed as remaining issues. Suffix files like
-  `*-later.md`, `*-manual.md`, `*-agent-failed.md` are excluded from the
-  "remaining issues" prompt.
+- **문법**: `<stream>-<N>[-<slug>][__<KEY>-<value>]*.md` — KEY는 대문자
+  `TYPE`/`STATE`/`BY`만.
+- **판정 규칙**: `__TYPE-`도 `__STATE-`도 없으면 pending("remaining
+  issues" 대상). 하나라도 있으면 제외 — `__STATE-later`/
+  `__STATE-manual`/`__STATE-agent-failed`는 파킹, `__TYPE-*`는 산출물.
+  번호는 정규식 `^(issue|autofix)-([0-9]+)`로 추출한다.
+- **예약 슬러그 가드**: 태그 없는 파일이 구(v1) 규약 구조에 해당하면
+  (패턴 표는 spec 문서) 목록에 넣지 말고 "harness-project의
+  `upgrade-issue-filenames.sh`를 실행하라"는 안내와 함께 중단한다.
 - **Worktree branch name** (worktree mode): `<stream>-<N>` (e.g.,
-  `autofix-3` for an autofix-stream issue).
+  `autofix-3` for an autofix-stream issue) — 슬러그·태그는 브랜치명에
+  포함하지 않는다.
 
 ## How this package relates to plain `/tdd`
 
@@ -127,10 +133,11 @@ below.
 
 1. List every issue still in `issues/` (not yet archived) — everything,
    regardless of state: not started, in-progress, or already
-   pending-deploy.
+   pending-deploy. 태그 파일은 목록에서 제외한다 (판정 규칙은 Stream
+   conventions / spec 문서 참조).
 
    ```bash
-   ls issues/issue-*.md 2>/dev/null
+   ls issues/issue-*.md 2>/dev/null | grep -v '__'
    ```
 
 2. Show the list, ask **once**: "run through all N of these in order?"
@@ -225,11 +232,14 @@ destroys that boundary.
 
 ## Per-issue loop (default — no worktree)
 
-For each issue `#` in the target list, **check its state first** —
+For each issue `#` in the target list, **resolve its file first**
+(`issues/issue-#.md`, or the unique tag-less `issues/issue-#-<slug>.md`
+— see the spec in Stream conventions), then **check its state** —
 don't redo finished work:
 
 ```bash
-grep -q '\*\*구현 완료 일시\*\*: *(미정)' "issues/issue-${n}.md"
+f=$(ls "issues/issue-${n}.md" issues/issue-${n}-*.md 2>/dev/null | grep -v '__' | head -1)
+grep -q '\*\*구현 완료 일시\*\*: *(미정)' "$f"
 ```
 
 - Placeholder still `(미정)` (not implemented, or in-progress) →
@@ -240,7 +250,7 @@ grep -q '\*\*구현 완료 일시\*\*: *(미정)' "issues/issue-${n}.md"
 
 ```
 for # in <target list>:
-    if issues/issue-#.md does not exist:
+    if no tag-less issues/issue-#*.md resolves (rule above):
         warn and skip #, continue to next
     if 구현 결과 already filled in:
         acpd #

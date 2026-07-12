@@ -32,8 +32,8 @@ for flag in "--model" "--coder" "--reviewers" "--planner"; do
     fi
 done
 
-# ----- 3. 위치 인자, worktree, -by-self, feedback-review.md 서술 존재 -----
-for keyword in "positional" "worktree" "-by-self" "feedback-review.md"; do
+# ----- 3. 위치 인자, worktree, __BY-self, __TYPE-refix-plan 서술 존재 (issue-39 규약 v2로 supersede) -----
+for keyword in "positional" "worktree" "__BY-self" "__TYPE-refix-plan"; do
     if grep -qi -e "$keyword" "$SKILL_PATH"; then
         pass "SKILL.md에 '$keyword' 관련 서술 존재함"
     else

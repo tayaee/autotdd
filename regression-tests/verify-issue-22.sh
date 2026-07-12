@@ -1,11 +1,11 @@
 #!/bin/bash
 # verify-issue-22.sh — generalize three SKILL.md files to recognize
 # two issue streams (issue-N, autofix-N) and exclude suffix files
-# (-later, -manual, -agent-failed).
+# (v2: __STATE-later/__STATE-manual/__STATE-agent-failed 태그 — issue-39에서 supersede).
 #
 # Per issue-22 acceptance criteria:
 #   1. All 3 SKILL.md mention 'autofix-' string
-#   2. All 3 SKILL.md mention suffix exclusion (-later etc)
+#   2. All 3 SKILL.md mention state-tag exclusion (__STATE- etc)
 #   3. tdd2 SKILL.md has verify-<stream> placeholder in path guidance
 #
 # Plus issue-body requirement: aacp.sh also generalized to recognize both
@@ -41,7 +41,7 @@ done
 
 # Acceptance #2: all 3 SKILL.md mention suffix exclusion
 for s in "${SKILLS[@]}"; do
-    assert_in_skill "$s" '(-later|-manual|-agent-failed)' 'suffix exclusion (-later/-manual/-agent-failed)'
+    assert_in_skill "$s" '__STATE-' 'state-tag exclusion (__STATE-later/-manual/-agent-failed)'
 done
 
 # Acceptance #3: tdd2 SKILL.md has verify-<stream> placeholder

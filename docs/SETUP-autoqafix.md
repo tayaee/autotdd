@@ -78,11 +78,11 @@ Windows 머신에서 무인으로 돌릴 때:
 ## 6. 운영 규약 요약
 
 - **스트림 2개**: 사람 작성 `issue-N`, agent 보고 `autofix-N`. 번호는 스트림별 독립.
-- **상태 접미사 4종**:
-  - 없음 → 기계 대상
-  - `-manual` → 사람 직접 처리
-  - `-agent-failed` → 사람이 실패 기록 읽고 보강 후 접미사 제거 후 재시도
-  - `-later` → 사람이 미룸 (rename하여 다시 대기열로)
+- **상태 태그** (파일명 규약 v2 — 정본: [`docs/spec/spec-issue-filenames.md`](./spec/spec-issue-filenames.md)):
+  - 태그 없음 → 기계 대상 (pending)
+  - `__STATE-manual` → 사람 직접 처리
+  - `__STATE-agent-failed` → 사람이 실패 기록 읽고 보강 후 태그 제거 후 재시도
+  - `__STATE-later` → 사람이 미룸 (태그 제거로 다시 대기열로)
 - **용어 + 설계 본문**: [`<autotdd>/CONTEXT.md`](../CONTEXT.md),
   [`<autotdd>/docs/autoqafix-design.md`](./autoqafix-design.md)
 

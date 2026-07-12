@@ -136,7 +136,7 @@ else
     fail "Re-running immediately created new commits"
 fi
 
-# 5. TIER: manual 응답 검증 -> autofix-2-manual.md 로 변경되어 올라가야 함
+# 5. TIER: manual 응답 검증 -> autofix-2__STATE-manual.md 로 변경되어 올라가야 함
 # 새 에러 추가
 {
     printf '2026-07-10 12:06:00,000 [ERROR] app.main - Manual error\n'
@@ -157,11 +157,11 @@ EOF
 uv -q run "$ERROR_TO_AUTOFIX" --repo "$work"
 git -C "$work" pull -q origin main
 
-manual_file="$work/issues/autofix-2-manual.md"
+manual_file="$work/issues/autofix-2__STATE-manual.md"
 if [ -f "$manual_file" ]; then
-    pass "autofix-2-manual.md successfully created and staged/committed as manual"
+    pass "autofix-2__STATE-manual.md successfully created and staged/committed as manual"
 else
-    fail "autofix-2-manual.md was not found"
+    fail "autofix-2__STATE-manual.md was not found"
 fi
 
 # 6. select-llm이 none 인 유료 LLM 부적격 검증 (보고 연기)

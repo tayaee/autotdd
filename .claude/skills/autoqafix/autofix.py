@@ -8,7 +8,9 @@
 state_dir/worktree, per-item LLM re-selection, `tier stamp` for items
 missing `agent-tier:`, tier matching, then dispatch: run the wrapper in
 the worktree, judge success by archive presence after pull, recover the
-worktree and push an `-agent-failed` record on failure/timeout (issue-16).
+worktree and push an `__STATE-agent-failed` record on failure/timeout
+(issue-16; filename convention v2 per docs/spec/spec-issue-filenames.md,
+issue-39).
 
 Stream is selected by --stream (default autofix; pass `issue` for autodev).
 Role passed to preflight/lock follows: autofix → fix, autodev → dev.
@@ -27,7 +29,7 @@ import autoqafix_core as core
 
 STREAM_DEFAULT = "autofix"
 STREAMS = ("autofix", "issue")
-SUFFIXES = ("-later", "-manual", "-agent-failed")
+STATE_TAGS = ("later", "manual", "agent-failed")  # __STATE-<값> 파킹 태그
 SCRIPT_DIR = Path(__file__).resolve().parent
 WRAPPER_DEFAULT_DIR = SCRIPT_DIR / "wrappers"
 
@@ -79,26 +81,44 @@ def ensure_worktree(repo: Path, worktree: Path) -> None:
 from autoqafix_core import parse_wrapper_spec
 
 
+class LegacyFilenameError(RuntimeError):
+    """구(v1) 규약 파일명이 발견됨 — 조용한 오분류 대신 시끄럽게 중단."""
+
+
 def enumerate_items(worktree: Path, stream: str) -> list[Path]:
-    """Return `issues/<stream>-<N>.md` paths inside `worktree`, sorted by N
-    ascending. Excludes:
-      * Files with a state suffix (-later / -manual / -agent-failed)
+    """Return pending work-item paths inside `worktree`, sorted by N
+    ascending. Filename convention v2 (docs/spec/spec-issue-filenames.md):
+    `<stream>-<N>[-<slug>][__<KEY>-<value>]*.md`. Excludes:
+      * Files with any tag (`__TYPE-*` artifacts / `__STATE-*` parked)
       * Reservation-in-progress files (no `## ` section yet)
+    Raises LegacyFilenameError on v1-convention names (reserved-slug
+    guard) so old files are never silently misclassified.
     """
     issues_dir = worktree / "issues"
     if not issues_dir.is_dir():
         return []
-    pattern = re.compile(
-        rf"^{re.escape(stream)}-(\d+)(?:-({'|'.join(s.lstrip('-') for s in SUFFIXES)}))?\.md$"
+    # 태그 없는 파일: <stream>-<N> 또는 <stream>-<N>-<slug> (슬러그는 영문자 시작)
+    pending_pat = re.compile(
+        rf"^{re.escape(stream)}-(\d+)(-[a-z][a-z0-9-]*)?\.md$"
+    )
+    # 예약 슬러그 가드: 구 규약 구조 (정확 슬러그 / 산출물 꼬리)
+    legacy_pat = re.compile(
+        rf"^{re.escape(stream)}-\d+-({'|'.join(STATE_TAGS)})\.md$"
+        r"|.*(-code-review-by-[a-z0-9-]+|-feedback-review|-review-result-\d+-by-[a-z0-9-]+)\.md$"
     )
     found: list[tuple[int, Path]] = []
     for f in sorted(issues_dir.iterdir()):
         if not f.is_file():
             continue
-        m = pattern.fullmatch(f.name)
-        if not m:
+        if "__" in f.name:  # 태그 파일(산출물·파킹)은 작업 큐 제외
             continue
-        if m.group(2):  # has a recognized state suffix
+        if legacy_pat.fullmatch(f.name):
+            raise LegacyFilenameError(
+                f"구 규약 파일 감지: issues/{f.name} — "
+                "harness-project의 upgrade-issue-filenames.sh를 실행하세요"
+            )
+        m = pending_pat.fullmatch(f.name)
+        if not m:
             continue
         try:
             text = f.read_text(encoding="utf-8", errors="ignore")
@@ -216,8 +236,8 @@ def stamp_tier(worktree: Path, item: Path, tier: str) -> None:
 
 
 def rename_to_manual(worktree: Path, item: Path) -> None:
-    """`git mv` to `<stem>-manual.md`, commit, push — inside the worktree."""
-    new_path = item.parent / f"{item.stem}-manual.md"
+    """`git mv` to `<stem>__STATE-manual.md`, commit, push — inside the worktree."""
+    new_path = item.parent / f"{item.stem}__STATE-manual.md"
     rel_old = item.relative_to(worktree)
     rel_new = new_path.relative_to(worktree)
     _git_or_die(worktree, "mv", str(rel_old), str(rel_new))
@@ -257,7 +277,7 @@ def dispatch(item: Path, wrapper: str, wrapper_path: Path, worktree: Path, repo:
 
     On failure/timeout the worktree is recovered with
     `reset --hard origin/main` + `git worktree prune` (issue-16 req 3) and
-    an ``-agent-failed`` record is committed and pushed.
+    an ``__STATE-agent-failed`` record is committed and pushed.
     """
     cmd = [
         "bash", str(wrapper_path), "-p",
@@ -311,7 +331,7 @@ def dispatch(item: Path, wrapper: str, wrapper_path: Path, worktree: Path, repo:
     body += record
     item.write_text(body)
 
-    new_path = item.parent / f"{item.stem}-agent-failed.md"
+    new_path = item.parent / f"{item.stem}__STATE-agent-failed.md"
     rel_old = item.relative_to(worktree)
     rel_new = new_path.relative_to(worktree)
     _git_or_die(worktree, "mv", str(rel_old), str(rel_new))
@@ -335,10 +355,14 @@ def run(repo: Path, stream: str) -> int:
     )
 
     ensure_worktree(repo, worktree)
-    items = enumerate_items(worktree, stream)
+    try:
+        items = enumerate_items(worktree, stream)
+    except LegacyFilenameError as exc:
+        print(str(exc), file=sys.stderr)
+        return 1
 
     dispatched = 0  # items handed to a wrapper (success or failure)
-    manual = 0      # items renamed to -manual
+    manual = 0      # items renamed to __STATE-manual
     skipped = 0     # not-this-time skip (tier mismatch, no judgement, ...)
     stamped = 0     # newly-stamped items
     fixed = 0       # items successfully archived by dispatch

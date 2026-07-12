@@ -45,7 +45,7 @@ Examples:
 Run from inside the target repo (any subdirectory). Verify:
 
 1. `cwd` contains `.git/`
-2. `issues/issue-<N>.md` exists for every requested issue number
+2. `issues/issue-<N>.md` (or the unique tag-less `issues/issue-<N>-<slug>.md` — see `docs/spec/spec-issue-filenames.md`) exists for every requested issue number
 
 If any check fails, abort with a clear message. Same pattern as `/autodev`.
 
@@ -62,36 +62,38 @@ The execution session runs `/autotdd <N>` inline (or `/autotdd <N> worktree` if 
 
 ### Step 2 — Reviewers (parallel, skip done ones)
 
-**Done check** (per reviewer `X`): `issues/issue-N-code-review-by-<X>.md` exists and is non-empty (where `<X>` is the base model name, or `self` for self-review).
+파일명 규약의 단일 정본은 `docs/spec/spec-issue-filenames.md`다.
+
+**Done check** (per reviewer `X`): `issues/issue-N__TYPE-code-review__BY-<X>.md` exists and is non-empty (where `<X>` is the base model name, or `self` for self-review — `__BY-` 값은 항상 래퍼 base명이며 버전명은 쓰지 않는다).
 
 For each undone reviewer, launch:
 - **External Reviewers**: For each reviewer `<X>`, launch in parallel:
   ```bash
-  /home/user1/git/harness-project/.local/bin/<X>-cli.sh -p "issue-<N>의 구현에 대해 코드 품질 감사를 수행하여 issues/issue-<N>-code-review-by-<X>.md 파일을 작성해. 본문 첫 줄에 자기 모델명(버전 포함)을 기입해야 함."
+  /home/user1/git/harness-project/.local/bin/<X>-cli.sh -p "issue-<N>의 구현에 대해 코드 품질 감사를 수행하여 issues/issue-<N>__TYPE-code-review__BY-<X>.md 파일을 작성해. 본문 첫 줄에 자기 모델명(버전 포함)을 기입해야 함."
   ```
 - **Self-Review**: If no reviewers were specified, launch a subagent in a new context (do not review inline in the same conversation) to write:
-  `issues/issue-N-code-review-by-self.md`. The prompt must instruct the subagent to perform a code quality audit of issue N's implementation, and write the report to `issues/issue-N-code-review-by-self.md`, including its model name (with version) in the first line of the file.
+  `issues/issue-N__TYPE-code-review__BY-self.md`. The prompt must instruct the subagent to perform a code quality audit of issue N's implementation, and write the report to `issues/issue-N__TYPE-code-review__BY-self.md`, including its model name (with version) in the first line of the file.
 
 Failure of one reviewer does NOT stop the others (continue-with-partial). When all parallel launches return, verify each output file exists and is non-empty. Note any failures for step 3.
 
 ### Step 3 — Planner (skip if done)
 
-**Done check**: `issues/issue-N-feedback-review.md` exists and is non-empty.
+**Done check**: `issues/issue-N__TYPE-refix-plan.md` exists and is non-empty.
 
 If not done:
 The execution session synthesizes the review files inline:
-Read all available review files matching `issues/issue-N-code-review-by-*.md`. Categorize findings into `must-fix`, `good-to-fix`, and `reject`. Then, use the `to-tickets` skill to write the fix plan to `issues/issue-N-feedback-review.md`.
+Read all available review files matching `issues/issue-N__TYPE-code-review__BY-*.md`. Categorize findings into `must-fix`, `good-to-fix`, and `reject`. Then, use the `to-tickets` skill to write the fix plan to `issues/issue-N__TYPE-refix-plan.md`.
 
 If any reviewer files are missing (from failed reviewers in Step 2), prepend a note in the planning context: "Note: The reviewer file for <failed-reviewer> was unavailable. Synthesize from the surviving files."
 
 ### Step 4 — Coder re-fix (skip if done)
 
-**Done check**: every `issues/issue-N-code-review-by-*.md` and `issues/issue-N-feedback-review.md` file has been moved to `issues/archive/<YYYY>/<MM>/<DD>/`.
+**Done check**: every `issues/issue-N__TYPE-*.md` file (code-review들과 refix-plan) has been moved to `issues/archive/<YYYY>/<MM>/<DD>/` — 파일명 그대로, `git mv`로.
 
 If not done:
 The execution session runs:
-- Process all must-fix and good-to-fix tickets created from `issues/issue-N-feedback-review.md` by calling `/autotdd` (passing `worktree` if the original run specified `worktree`).
-- After completing all tickets, archive the review files `issues/issue-N-code-review-by-*.md` and `issues/issue-N-feedback-review.md` to `issues/archive/YYYY/MM/DD/` using `aacp`.
+- Process all must-fix and good-to-fix tickets created from `issues/issue-N__TYPE-refix-plan.md` by calling `/autotdd` (passing `worktree` if the original run specified `worktree`).
+- After completing all tickets, archive the review files `issues/issue-N__TYPE-code-review__BY-*.md` and `issues/issue-N__TYPE-refix-plan.md` to `issues/archive/YYYY/MM/DD/` using `aacp`.
 
 ## Failure policy
 

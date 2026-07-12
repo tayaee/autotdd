@@ -156,7 +156,7 @@ fi
 check_dummy "$T1/work" "TEST 1"
 
 # ============================================================================
-# TEST 2: FAKE_MODE=fail → -agent-failed file with 실패 기록
+# TEST 2: FAKE_MODE=fail → __STATE-agent-failed file with 실패 기록
 # ============================================================================
 echo ""
 echo "=== TEST 2: FAKE_MODE=fail ==="
@@ -176,11 +176,11 @@ else
     fail "TEST 2: expected FIXED=0, got: $(grep FIXED "$T2_OUT" || echo '(no output)')"
 fi
 
-AGENT_FAILED="$(git -C "$T2/origin" ls-tree -r main --name-only 2>/dev/null | grep '\-agent-failed\.md$' | head -n1)"
+AGENT_FAILED="$(git -C "$T2/origin" ls-tree -r main --name-only 2>/dev/null | grep '__STATE-agent-failed\.md$' | head -n1)"
 if [ -n "$AGENT_FAILED" ]; then
-    pass "TEST 2: -agent-failed file exists in origin"
+    pass "TEST 2: __STATE-agent-failed file exists in origin"
 else
-    fail "TEST 2: -agent-failed file not found in origin"
+    fail "TEST 2: __STATE-agent-failed file not found in origin"
 fi
 
 if [ -n "$AGENT_FAILED" ]; then
@@ -231,11 +231,11 @@ else
     fail "TEST 3: took ${T3_ELAPSED}s — timeout not honored"
 fi
 
-AGENT_FAILED3="$(git -C "$T3/origin" ls-tree -r main --name-only 2>/dev/null | grep '\-agent-failed\.md$' | head -n1)"
+AGENT_FAILED3="$(git -C "$T3/origin" ls-tree -r main --name-only 2>/dev/null | grep '__STATE-agent-failed\.md$' | head -n1)"
 if [ -n "$AGENT_FAILED3" ]; then
-    pass "TEST 3: -agent-failed file exists"
+    pass "TEST 3: __STATE-agent-failed file exists"
 else
-    fail "TEST 3: -agent-failed file not found"
+    fail "TEST 3: __STATE-agent-failed file not found"
 fi
 
 if [ -n "$AGENT_FAILED3" ]; then
@@ -287,10 +287,10 @@ else
     fail "TEST 4: expected FIXED=1, got: $(grep FIXED "$T4_OUT" || echo '(no output)')"
 fi
 
-if git -C "$T4/origin" ls-tree -r main --name-only 2>/dev/null | grep -q "^issues/autofix-1-agent-failed.md$"; then
-    pass "TEST 4: autofix-1 is the -agent-failed item"
+if git -C "$T4/origin" ls-tree -r main --name-only 2>/dev/null | grep -q "^issues/autofix-1__STATE-agent-failed.md$"; then
+    pass "TEST 4: autofix-1 is the __STATE-agent-failed item"
 else
-    fail "TEST 4: autofix-1-agent-failed.md not in origin"
+    fail "TEST 4: autofix-1__STATE-agent-failed.md not in origin"
 fi
 
 if git -C "$T4/origin" ls-tree -r main --name-only 2>/dev/null | grep -q "^issues/archive/.*/autofix-2.md$"; then
@@ -299,11 +299,11 @@ else
     fail "TEST 4: autofix-2 not archived — engine stopped after the failure"
 fi
 
-AGENT_FAILED_COUNT="$(git -C "$T4/origin" ls-tree -r main --name-only 2>/dev/null | grep -c '\-agent-failed\.md$' || true)"
+AGENT_FAILED_COUNT="$(git -C "$T4/origin" ls-tree -r main --name-only 2>/dev/null | grep -c '__STATE-agent-failed\.md$' || true)"
 if [ "$AGENT_FAILED_COUNT" -eq 1 ]; then
-    pass "TEST 4: exactly one -agent-failed in origin"
+    pass "TEST 4: exactly one __STATE-agent-failed in origin"
 else
-    fail "TEST 4: expected 1 -agent-failed, got $AGENT_FAILED_COUNT"
+    fail "TEST 4: expected 1 __STATE-agent-failed, got $AGENT_FAILED_COUNT"
 fi
 
 check_dummy "$T4/work" "TEST 4"
@@ -336,10 +336,10 @@ else
     fail "TEST 5: expected FIXED=1, got: $(grep FIXED "$T5_OUT" || echo '(no output)')"
 fi
 
-if ! git -C "$T5/origin" ls-tree -r main --name-only 2>/dev/null | grep -q '\-agent-failed\.md$'; then
-    pass "TEST 5: no spurious -agent-failed for an archived item"
+if ! git -C "$T5/origin" ls-tree -r main --name-only 2>/dev/null | grep -q '__STATE-agent-failed\.md$'; then
+    pass "TEST 5: no spurious __STATE-agent-failed for an archived item"
 else
-    fail "TEST 5: -agent-failed recorded despite successful archive"
+    fail "TEST 5: __STATE-agent-failed recorded despite successful archive"
 fi
 
 # ============================================================================
@@ -377,10 +377,10 @@ else
     pass "TEST 6: no partial-work commit in origin/main history"
 fi
 
-if git -C "$T6/origin" ls-tree -r main --name-only 2>/dev/null | grep -q "^issues/autofix-1-agent-failed.md$"; then
-    pass "TEST 6: -agent-failed recorded on origin"
+if git -C "$T6/origin" ls-tree -r main --name-only 2>/dev/null | grep -q "^issues/autofix-1__STATE-agent-failed.md$"; then
+    pass "TEST 6: __STATE-agent-failed recorded on origin"
 else
-    fail "TEST 6: -agent-failed missing from origin"
+    fail "TEST 6: __STATE-agent-failed missing from origin"
 fi
 
 # ============================================================================

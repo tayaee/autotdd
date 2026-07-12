@@ -21,13 +21,14 @@ Two issue streams are handled:
 - **Stream IDs**: `issue-<N>` and `autofix-<N>`. Bare-number arguments
   (e.g., `aacp 22`) default to the `issue` stream; `aacp autofix-3`
   selects the autofix stream.
-- **Archive target**: `issues/archive/<YYYY>/<MM>/<DD>/<stream>-<N>.md`
-  for either stream.
+- **Archive target**: `issues/archive/<YYYY>/<MM>/<DD>/` for either
+  stream — 파일명은 **그대로**(라이브·아카이브 단일 규약, 변환 없음)
+  `git mv`로 옮긴다 (`git log --follow` 이력 추적 보존).
 - **Commit prefix**: `<stream>-<N>: <summary>` (e.g., `issue-22: ...`,
   `autofix-3: ...`).
-- **Enumeration glob**: only files matching `<stream>-<digits>.md`
-  exactly are listed as pending. Suffix files like `*-later.md`,
-  `*-manual.md`, `*-agent-failed.md` are excluded.
+- **파일명 규약**: 단일 정본은 `docs/spec/spec-issue-filenames.md`.
+  pending 판정은 `__TYPE-`/`__STATE-` 태그 부재 — `__STATE-later` 등
+  파킹 파일과 `__TYPE-*` 산출물은 pending 목록에서 제외된다.
 
 ## A naming note before anything else
 

@@ -109,7 +109,7 @@ git -C "$work_A" pull -q origin main
 
 # Suffix / reservation items are filtered before any tier logic: they stay
 # in issues/ untouched (not archived, not renamed).
-for f in autofix-4-later autofix-5-manual autofix-6-agent-failed autofix-7; do
+for f in autofix-4__STATE-later autofix-5__STATE-manual autofix-6__STATE-agent-failed autofix-7; do
     if [ -f "$work_A/issues/$f.md" ]; then
         pass "Scenario A: $f untouched (filtered)"
     else
@@ -117,16 +117,16 @@ for f in autofix-4-later autofix-5-manual autofix-6-agent-failed autofix-7; do
     fi
 done
 
-# autofix-1 (judged manual) → -manual rename, never dispatched/archived.
-if [ -f "$work_A/issues/autofix-1-manual.md" ] && [ ! -f "$work_A/issues/autofix-1.md" ]; then
-    pass "Scenario A: autofix-1 → -manual rename"
+# autofix-1 (judged manual) → __STATE-manual rename, never dispatched/archived.
+if [ -f "$work_A/issues/autofix-1__STATE-manual.md" ] && [ ! -f "$work_A/issues/autofix-1.md" ]; then
+    pass "Scenario A: autofix-1 → __STATE-manual rename"
 else
-    fail "Scenario A: autofix-1 -manual rename not detected (work listing: $(ls "$work_A/issues" | tr '\n' ' '))"
+    fail "Scenario A: autofix-1 __STATE-manual rename not detected (work listing: $(ls "$work_A/issues" | tr '\n' ' '))"
 fi
-if grep -q "^agent-tier: manual$" "$work_A/issues/autofix-1-manual.md" 2>/dev/null; then
-    pass "Scenario A: -manual file carries agent-tier: manual stamp"
+if grep -q "^agent-tier: manual$" "$work_A/issues/autofix-1__STATE-manual.md" 2>/dev/null; then
+    pass "Scenario A: __STATE-manual file carries agent-tier: manual stamp"
 else
-    fail "Scenario A: -manual file missing agent-tier: manual stamp"
+    fail "Scenario A: __STATE-manual file missing agent-tier: manual stamp"
 fi
 if find "$work_A/issues/archive" -name "autofix-1*.md" 2>/dev/null | grep -q .; then
     fail "Scenario A: manual item was dispatched (found in archive/)"
