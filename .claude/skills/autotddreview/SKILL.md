@@ -58,7 +58,23 @@ For each issue `N`, in order. Each step's "done check" is file-based — skip th
 **Done check**: `regression-tests/verify-issue-N.sh` exists AND `issues/issue-N.md` has the `## 구현 결과` placeholder replaced with real content (the `(미정)` marker absent).
 
 If not done:
-The execution session runs `/autotdd <N>` inline (or `/autotdd <N> worktree` if the `worktree` keyword was provided). Wait for it to complete.
+1. **시작 HEAD 기록**: `git rev-parse HEAD`를 `<시작HEAD>`로 기록한다
+   (Step 2의 리뷰 대상 범위 산출용).
+2. The execution session runs `/autotdd <N>` inline (or `/autotdd <N>
+   worktree` if the `worktree` keyword was provided). Wait for it to
+   complete.
+
+**리뷰 대상 범위 산출** (Step 1 완료 직후, Step 2 주입용):
+
+- 커밋 범위: `<시작HEAD>..HEAD`
+- 변경 파일 목록: `git diff --name-only <시작HEAD>..HEAD`
+- worktree 모드: 병합 후 **main 기준**으로 동일하게 산출한다.
+- Step 1을 skip한 재실행(멱등 재개)이라 `<시작HEAD>`가 없으면: 커밋
+  메시지의 `issue-N:` prefix 관행으로 해당 커밋들을 **역추적**해 같은
+  정보를 산출한다.
+- 역추적도 실패하면 폴백: 범위 없이 리뷰어에게 맡기지 말고, 이슈 파일과
+  회귀 스크립트 경로만이라도 명시하며 범위 산출이 실패했다는 사실을
+  프롬프트에 밝힌다 (**침묵 금지**).
 
 ### Step 2 — Reviewers (parallel, skip done ones)
 
@@ -66,9 +82,9 @@ The execution session runs `/autotdd <N>` inline (or `/autotdd <N> worktree` if 
 
 **Done check** (per reviewer `X`): `issues/issue-N__TYPE-code-review__BY-<X>.md` exists and is non-empty (where `<X>` is the base model name, or `self` for self-review — `__BY-` 값은 항상 래퍼 base명이며 버전명은 쓰지 않는다).
 
-#### 리뷰어 프롬프트 — 4부 구조 (외부 래퍼·셀프 리뷰 공통)
+#### 리뷰어 프롬프트 — 5부 구조 (외부 래퍼·셀프 리뷰 공통)
 
-실행 세션이 아래 4부를 조립해 하나의 프롬프트로 전달한다. 목적은 추측
+실행 세션이 아래 5부를 조립해 하나의 프롬프트로 전달한다. 목적은 추측
 리뷰의 구조적 차단 — 리뷰 사이클은 티켓 수백 개에 걸쳐 반복되므로 한
 번에 다 찾을 필요가 없고, 확실한 것만 잡는 게 중요하다.
 
@@ -97,6 +113,13 @@ The execution session runs `/autotdd <N>` inline (or `/autotdd <N> worktree` if 
 (파일:라인 / 코드 인용 / 실패 시나리오 / 확인 방법 / 심각도 제안
 `must-fix`|`good-to-fix`)를 표 또는 고정 섹션으로 강제. Step 3 플래너가
 기계적으로 판정할 수 있는 형태여야 한다.
+
+**⑤ 리뷰 대상 범위** (Step 1에서 산출한 값을 주입):
+- 이슈 파일 경로 (`issues/issue-<N>*.md`) — **스펙 대조**용
+- **커밋 범위**와 **변경 파일 목록**
+- **회귀 스크립트** 경로 (`regression-tests/verify-issue-<N>.sh`)
+- 지시: "리뷰 대상은 이 범위다. **범위 밖** 코드는 이 변경과의 직접
+  상호작용(**호출부**·피호출부)이 문제일 때만 언급하라."
 
 공통 유지 지시: 본문 첫 줄에 자기 모델명(버전 포함)을 기입.
 
