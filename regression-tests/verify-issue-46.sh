@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 # verify-issue-46.sh — coding-stats.json 통합 (MVP + Review 결함 수집 및 집계)
+# 주의: issue-47에서 coding-stats.json은 agent-stats.json으로 재통합됨 — 이 스크립트의
+# 픽스처 파일명·SKILL.md 단언은 그에 맞춰 갱신됨(regression-tests/verify-issue-46.conflict-with-47.md 참조).
 set -u
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -38,24 +40,25 @@ for f in "$SKILL_REVIEW" "$SKILL_TDD2" "$GLOBAL_SKILL_REVIEW" "$GLOBAL_SKILL_TDD
     not_has "$f" "coder-stats.jsonl" "SKILL.md coder-stats.jsonl 언급 제거: $(basename "$f")"
 done
 
-# coding-stats.json 스키마 필드명 존재 단언
-has "$SKILL_TDD2" "coding-stats.json" "tdd2: coding-stats.json 언급"
+# agent-stats.json 스키마 필드명 존재 단언 (issue-47: coding-stats.json에서 이관)
+has "$SKILL_TDD2" "agent-stats.json" "tdd2: agent-stats.json 언급"
 has "$SKILL_TDD2" "static_analysis_failures" "tdd2: static_analysis_failures 스키마 포함"
-has "$SKILL_REVIEW" "coding-stats.json" "autotddreview: coding-stats.json 언급"
+has "$SKILL_REVIEW" "agent-stats.json" "autotddreview: agent-stats.json 언급"
 has "$SKILL_REVIEW" "review_outcome" "autotddreview: review_outcome 스키마 포함"
 has "$SKILL_REVIEW" "refix_plans_written" "autotddreview: refix_plans_written 스키마 포함"
 
-# 2) spec-issue-filenames.md에 coder-stats 잔존 0건, coding-stats 존재 단언
+# 2) spec-issue-filenames.md에 coder-stats/coding-stats 잔존 0건, agent-stats 존재 단언
 not_has "$SPEC" "coder-stats" "spec: coder-stats 제거"
-has "$SPEC" "coding-stats" "spec: coding-stats 추가"
+not_has "$SPEC" "coding-stats" "spec: coding-stats 제거 (issue-47)"
+has "$SPEC" "agent-stats" "spec: agent-stats 추가"
 
-# 3) 픽스처 coding-stats.json으로 스코어보드 실행
+# 3) 픽스처 agent-stats.json으로 스코어보드 실행
 T="$(mktemp -d)"
 trap 'rm -rf "$T"' EXIT
 mkdir -p "$T/repo/issues"
 
 # 픽스처 1: 정적분석만 있는 것 (loc=100, ruff=2, pyright=1)
-cat > "$T/repo/issues/issue-10__TYPE-coding-stats.json" <<'EOF'
+cat > "$T/repo/issues/issue-10__TYPE-agent-stats.json" <<'EOF'
 {
   "issue": 10,
   "coders": {
@@ -72,7 +75,7 @@ cat > "$T/repo/issues/issue-10__TYPE-coding-stats.json" <<'EOF'
 EOF
 
 # 픽스처 2: review_outcome까지 병합된 것 (loc=200, ruff=0, pyright=0, must_fix=2, good=3, refix=1)
-cat > "$T/repo/issues/issue-20__TYPE-coding-stats.json" <<'EOF'
+cat > "$T/repo/issues/issue-20__TYPE-agent-stats.json" <<'EOF'
 {
   "issue": 20,
   "coders": {
@@ -96,7 +99,7 @@ cat > "$T/repo/issues/issue-20__TYPE-coding-stats.json" <<'EOF'
 EOF
 
 # 픽스처 3: static_analysis_failures가 null인 것 (loc=50, ruff=null, pyright=null)
-cat > "$T/repo/issues/issue-30__TYPE-coding-stats.json" <<'EOF'
+cat > "$T/repo/issues/issue-30__TYPE-agent-stats.json" <<'EOF'
 {
   "issue": 30,
   "coders": {

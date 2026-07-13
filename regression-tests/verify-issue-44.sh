@@ -40,11 +40,11 @@ trap 'rm -rf "$T"' EXIT
 mkdir -p "$T/repo_with_model/issues"
 mkdir -p "$T/repo_without_model/issues"
 
-cat > "$T/repo_with_model/issues/issue-21__TYPE-review-stats.json" <<'EOF'
-{"issue": 21, "date": "2026-07-01T10:00:00", "reviewers": {"qwen": {"model": "qwen 3 max preview", "findings": 10, "gate_rejected": 4, "verify_rejected": 1, "must_fix": 2, "good_to_fix": 3}}, "derived": []}
+cat > "$T/repo_with_model/issues/issue-21__TYPE-agent-stats.json" <<'EOF'
+{"issue": 21, "started": "2026-07-01T10:00:00", "reviewers": {"qwen": {"model": "qwen 3 max preview", "findings": 10, "gate_rejected": 4, "verify_rejected": 1, "must_fix": 2, "good_to_fix": 3}}, "derived_by_reviewers": [], "coders": {}}
 EOF
-cat > "$T/repo_without_model/issues/issue-21__TYPE-review-stats.json" <<'EOF'
-{"issue": 21, "date": "2026-07-01T10:00:00", "reviewers": {"qwen": {"findings": 10, "gate_rejected": 4, "verify_rejected": 1, "must_fix": 2, "good_to_fix": 3}}, "derived": []}
+cat > "$T/repo_without_model/issues/issue-21__TYPE-agent-stats.json" <<'EOF'
+{"issue": 21, "started": "2026-07-01T10:00:00", "reviewers": {"qwen": {"findings": 10, "gate_rejected": 4, "verify_rejected": 1, "must_fix": 2, "good_to_fix": 3}}, "derived_by_reviewers": [], "coders": {}}
 EOF
 
 WITH_MODEL=$(python3 "$CLI" "$T/repo_with_model" --json 2>/dev/null)

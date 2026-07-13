@@ -26,14 +26,15 @@ grill 세션 2026-07-12 합의)
 - 태그 KEY는 대문자, 값은 소문자 kebab. KEY 순서는 `TYPE` → `STATE` →
   `BY`로 고정.
 - 확장자는 보통 `.md`. 판정 규칙(아래)은 `.md`만 대상이며, `.md` 외
-  확장자 산출물도 같은 태그 문법을 쓴다 — 예: 리뷰 판정 통계
-  `issue-N__TYPE-review-stats.json` (issue-41 정의). 파이프라인에 중립.
+  확장자 산출물도 같은 태그 문법을 쓴다 — 예: 리뷰어·구현자 통계
+  `issue-N__TYPE-agent-stats.json`(issue-41/44/45/46 정의, issue-47에서
+  단일 파일로 통합). 파이프라인에 중립.
 
 ## 태그 3종
 
 | 태그 | 값 | 뜻 |
 |---|---|---|
-| `__TYPE-` | `code-review` \| `refix-plan` \| `review-stats` \| `coding-stats` \| (확장 가능) | 산출물 종류 — 작업 아님 |
+| `__TYPE-` | `code-review` \| `refix-plan` \| `agent-stats` \| (확장 가능) | 산출물 종류 — 작업 아님 |
 | `__STATE-` | `later` \| `manual` \| `agent-failed` | 파킹 — 지금 안 함 |
 | `__BY-` | 래퍼 base명 (`qwen`, `sonnet`, …) 또는 `self` | 작성자 (code-review에 필수, refix-plan엔 없음) |
 
@@ -118,8 +119,7 @@ autofix-8__STATE-agent-failed.md          파킹: 에이전트 실패 기록
 issue-21__TYPE-code-review__BY-qwen.md    산출물: qwen의 리뷰
 issue-21__TYPE-code-review__BY-self.md    산출물: 셀프 리뷰
 issue-21__TYPE-refix-plan.md              산출물: 리뷰 종합 수정계획
-issue-21__TYPE-review-stats.json          산출물: 판정 통계 (기계용)
-issue-21__TYPE-coding-stats.json          산출물: 구현자 MVP 및 리뷰 결함 통계
+issue-21__TYPE-agent-stats.json           산출물: 리뷰어·구현자 통계 (기계용)
 ```
 
 핵심 한 문장: **`__` 뒤는 기계가 읽고(판정), `-` 슬러그는 사람이

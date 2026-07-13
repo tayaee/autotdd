@@ -24,6 +24,11 @@ Two issue streams are handled:
 - **Archive target**: `issues/archive/<YYYY>/<MM>/<DD>/` for either
   stream — 파일명은 **그대로**(라이브·아카이브 단일 규약, 변환 없음)
   `git mv`로 옮긴다 (`git log --follow` 이력 추적 보존).
+- **`__TYPE-*` 산출물 동반 아카이브** (issue-47): 이 이슈의 살아있는
+  `issue-N__TYPE-*` 파일(code-review들, refix-plan, agent-stats.json)도
+  같은 커밋에서 함께 아카이브한다 — 별도 호출 불요. `agent-stats.json`은
+  이동 직전 `defaults/agent-stats-archive.py`가 `archived`/`duration`
+  필드를 채운다.
 - **Commit prefix**: `<stream>-<N>: <summary>` (e.g., `issue-22: ...`,
   `autofix-3: ...`).
 - **파일명 규약**: 단일 정본은 `docs/spec/spec-issue-filenames.md`.

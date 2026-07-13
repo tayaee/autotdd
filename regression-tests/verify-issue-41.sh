@@ -32,10 +32,10 @@ has "계보" "본문 계보 필수"
 # refix-plan
 has "__TYPE-refix-plan" "refix-plan 산출"
 has "재검증 실패" "reject 사유 구분(증거 미비/재검증 실패)"
-# review-stats JSON
-has "__TYPE-review-stats.json" "review-stats JSON 기록"
+# agent-stats JSON (issue-47: review-stats.json + coding-stats.json 통합)
+has "__TYPE-agent-stats.json" "agent-stats JSON 기록"
 for field in findings gate_rejected verify_rejected must_fix good_to_fix; do
-    has "$field" "review-stats 필드: $field"
+    has "$field" "agent-stats 필드: $field"
 done
 # Step 4
 has "pending" "Step 4: pending 파생 이슈만 처리"

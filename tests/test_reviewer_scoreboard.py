@@ -1,4 +1,4 @@
-"""tools/reviewer-scoreboard.py 단위 테스트 (issue-43).
+"""tools/reviewer-scoreboard.py 단위 테스트 (issue-43, issue-47에서 agent-stats.json으로 이관).
 
 공개 경계(CLI 프로세스)에서 검증한다 — 내부 함수가 아니라 실제 실행
 결과(stdout/stderr/exit code)를 단언한다.
@@ -20,10 +20,13 @@ def run_cli(*args: str) -> subprocess.CompletedProcess[str]:
     )
 
 
-def write_stats(issues_dir: Path, n: int, date: str, reviewers: dict) -> None:
+def write_stats(issues_dir: Path, n: int, started: str, reviewers: dict) -> None:
     issues_dir.mkdir(parents=True, exist_ok=True)
-    payload = {"issue": n, "date": date, "reviewers": reviewers, "derived": []}
-    (issues_dir / f"issue-{n}__TYPE-review-stats.json").write_text(
+    # 실제 파이프라인에서는 tdd2가 coders 골격을 먼저 만들어 두므로
+    # reviewers만 있는 픽스처도 coders: {}를 함께 둔다(현실적 형태 유지).
+    payload = {"issue": n, "started": started, "reviewers": reviewers,
+               "derived_by_reviewers": [], "coders": {}}
+    (issues_dir / f"issue-{n}__TYPE-agent-stats.json").write_text(
         json.dumps(payload), encoding="utf-8"
     )
 
@@ -95,13 +98,38 @@ def test_corrupt_json_warns_and_continues(tmp_path: Path) -> None:
         "qwen": {"findings": 3, "gate_rejected": 0, "verify_rejected": 0,
                  "must_fix": 1, "good_to_fix": 1},
     })
-    (repo / "issues" / "issue-9__TYPE-review-stats.json").write_text(
+    (repo / "issues" / "issue-9__TYPE-agent-stats.json").write_text(
         "{not valid json", encoding="utf-8"
     )
     proc = run_cli(str(repo))
     assert proc.returncode == 0          # 손상 파일이 실행을 죽이지 않음
     assert "issue-9" in proc.stderr      # 침묵 금지 — 경고 출력
     assert "qwen" in proc.stdout         # 생존 파일은 정상 집계
+
+
+def test_coder_only_file_without_reviewers_is_not_corruption(tmp_path: Path) -> None:
+    """리뷰 사이클 없이 순수 /tdd2 + /acpd만 거친 이슈는 reviewers 키 자체가 없다.
+
+    이는 손상이 아니라 정상 상태(issue-47) — 경고 없이 조용히 리뷰어
+    집계에서만 제외되어야 한다(coders 집계에는 영향 없음, 그건
+    collect_coders의 몫).
+    """
+    repo = make_repo(tmp_path)
+    (repo / "issues").mkdir(parents=True, exist_ok=True)
+    (repo / "issues" / "issue-30__TYPE-agent-stats.json").write_text(
+        json.dumps({"issue": 30, "started": "2026-07-01T10:00:00Z",
+                    "coders": {"sonnet5": {"model": "Claude Sonnet 5"}}}),
+        encoding="utf-8",
+    )
+    write_stats(repo / "issues", 21, "2026-07-01T10:00:00", {
+        "qwen": {"findings": 3, "gate_rejected": 0, "verify_rejected": 0,
+                 "must_fix": 1, "good_to_fix": 1},
+    })
+    proc = run_cli(str(repo))
+    assert proc.returncode == 0
+    assert "issue-30" not in proc.stderr
+    assert proc.stderr.strip() == ""
+    assert "qwen" in proc.stdout
 
 
 def test_empty_issues_dir_reports_no_data(tmp_path: Path) -> None:

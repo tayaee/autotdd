@@ -3,11 +3,11 @@
 # requires-python = ">=3.12"
 # dependencies = []
 # ///
-"""reviewer-scoreboard — 리뷰어/구현자 스코어보드 CLI (issue-43, issue-45).
+"""reviewer-scoreboard — 리뷰어/구현자 스코어보드 CLI (issue-43, issue-47).
 
-autotddreview의 플래너(issue-41)가 사이클마다 남기는
-`issues/issue-N__TYPE-review-stats.json`과 tdd2 coder 측(issue-45)이
-남기는 `issues/issue-N__TYPE-coder-stats.jsonl`을 라이브·아카이브에서
+autotddreview의 플래너(issue-41)와 tdd2(issue-45/46)가 한 이슈당 하나씩
+남기는 `issues/issue-N__TYPE-agent-stats.json`(issue-47에서
+review-stats.json + coding-stats.json을 통합)을 라이브·아카이브에서
 모두 모아 모델별로 집계한다. 표준 라이브러리만 사용.
 
 사용법:
@@ -22,20 +22,11 @@ from datetime import date, datetime
 from pathlib import Path
 
 COUNT_KEYS = ("findings", "must_fix", "good_to_fix", "gate_rejected", "verify_rejected")
-
-_EMPTY_CODER: dict[str, int | str | set[int]] = {
-    "issues": set(),       # type: ignore[assignment]
-    "runs": 0,
-    "errors": 0,
-    "fixed": 0,
-    "syntax_errors": 0,
-    "loc_added": 0,
-    "model": "",
-}
+STATS_GLOB = "*__TYPE-agent-stats.json"
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
-    p = argparse.ArgumentParser(description="리뷰어/구현자 review-stats + coder-stats 집계")
+    p = argparse.ArgumentParser(description="리뷰어/구현자 agent-stats 집계")
     p.add_argument("repo", nargs="?", default=".", help="대상 리포 경로 (기본: cwd)")
     p.add_argument("--json", action="store_true", dest="as_json", help="기계용 JSON 출력")
     p.add_argument("--since", type=date.fromisoformat, default=None,
@@ -54,23 +45,34 @@ def _parse_iso_date(value: object) -> date | None:
 
 
 def collect(repo: Path, since: date | None) -> tuple[dict[str, dict[str, int]], int]:
-    """리뷰어 review-stats JSON을 재귀 수집·집계. 손상 파일은 경고 후 계속."""
+    """리뷰어 agent-stats JSON을 재귀 수집·집계. 손상 파일은 경고 후 계속.
+
+    `reviewers` 키가 아예 없는 파일(순수 /tdd2 + /acpd만 거쳐 리뷰
+    사이클이 없었던 이슈)은 손상이 아니라 정상 상태(issue-47) —
+    조용히 건너뛴다(경고 없음). `reviewers`가 있는데 객체가 아니거나
+    JSON 자체가 손상된 경우만 경고.
+    """
     issues_dir = repo / "issues"
     stats: dict[str, dict[str, int]] = {}
     cycles = 0
-    for f in sorted(issues_dir.rglob("*__TYPE-review-stats.json")):
+    for f in sorted(issues_dir.rglob(STATS_GLOB)):
         try:
             data = json.loads(f.read_text(encoding="utf-8"))
-            reviewers = data["reviewers"]
-            if not isinstance(reviewers, dict):
-                raise ValueError("reviewers 필드가 객체가 아님")
+            if not isinstance(data, dict):
+                raise ValueError("최상위가 객체가 아님")
         except Exception as exc:
             print(f"경고: {f} 파싱 불가 — 건너뜀 ({exc})", file=sys.stderr)
             continue
+        reviewers = data.get("reviewers")
+        if reviewers is None:
+            continue  # 리뷰 사이클 없음(coder 전용) — 정상, 경고 없음
+        if not isinstance(reviewers, dict):
+            print(f"경고: {f} reviewers 필드가 객체가 아님 — 건너뜀", file=sys.stderr)
+            continue
         if since is not None:
-            when = _parse_iso_date(data.get("date"))
+            when = _parse_iso_date(data.get("started"))
             if when is None:
-                print(f"경고: {f} date 필드 해석 불가 — 건너뜀", file=sys.stderr)
+                print(f"경고: {f} started 필드 해석 불가 — 건너뜀", file=sys.stderr)
                 continue
             if when < since:
                 continue
@@ -88,13 +90,15 @@ def collect(repo: Path, since: date | None) -> tuple[dict[str, dict[str, int]], 
 
 
 def collect_coders(repo: Path, since: date | None) -> dict[str, dict]:
-    """구현자 coding-stats JSON을 재귀 수집·집계.
+    """구현자 agent-stats JSON을 재귀 수집·집계.
 
-    손상 파일/누락 필드는 stderr 경고 후 계속(침묵 금지).
+    손상 파일/누락 필드는 stderr 경고 후 계속(침묵 금지). `--since` 필터는
+    이슈 레벨 `started` 필드 기준(collect()의 리뷰어 축과 동일 필드 —
+    issue-47에서 통일).
     """
     issues_dir = repo / "issues"
     stats: dict[str, dict] = {}
-    for f in sorted(issues_dir.rglob("*__TYPE-coding-stats.json")):
+    for f in sorted(issues_dir.rglob(STATS_GLOB)):
         stem = f.stem
         prefix = "issue-"
         idx = stem.find(prefix)
@@ -124,6 +128,13 @@ def collect_coders(repo: Path, since: date | None) -> dict[str, dict]:
         if not isinstance(coders, dict):
             print(f"경고: {f} 'coders' 필드가 없거나 객체가 아님 — 건너뜀", file=sys.stderr)
             continue
+        if since is not None:
+            when = _parse_iso_date(data.get("started"))
+            if when is None:
+                print(f"경고: {f} started 필드 해석 불가 — 건너뜀", file=sys.stderr)
+                continue
+            if when < since:
+                continue
         for coder_id, coder_data in coders.items():
             if not isinstance(coder_data, dict):
                 print(f"경고: {f} coder {coder_id} 데이터가 객체가 아님 — 건너뜀", file=sys.stderr)
@@ -134,16 +145,6 @@ def collect_coders(repo: Path, since: date | None) -> dict[str, dict]:
                 continue
             mvp = coder_data.get("mvp")
             review_outcome = coder_data.get("review_outcome")
-            mvp_date = None
-            review_date = None
-            if isinstance(mvp, dict):
-                mvp_date = _parse_iso_date(mvp.get("ts"))
-            if isinstance(review_outcome, dict):
-                review_date = _parse_iso_date(review_outcome.get("ts"))
-            dates = [d for d in (mvp_date, review_date) if d is not None]
-            if since is not None:
-                if not dates or max(dates) < since:
-                    continue
             agg = stats.setdefault(coder_id, _empty_coder_dict())
             agg["issues"].add(issue_n)
             agg["model"] = model

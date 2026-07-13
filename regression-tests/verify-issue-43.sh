@@ -25,13 +25,13 @@ fi
 T="$(mktemp -d)"
 trap 'rm -rf "$T"' EXIT
 mkdir -p "$T/repo/issues/archive/2026/07/01"
-cat > "$T/repo/issues/issue-21__TYPE-review-stats.json" <<'EOF'
-{"issue": 21, "date": "2026-07-01T10:00:00", "reviewers": {"qwen": {"findings": 10, "gate_rejected": 4, "verify_rejected": 1, "must_fix": 2, "good_to_fix": 3}}, "derived": []}
+cat > "$T/repo/issues/issue-21__TYPE-agent-stats.json" <<'EOF'
+{"issue": 21, "started": "2026-07-01T10:00:00", "reviewers": {"qwen": {"findings": 10, "gate_rejected": 4, "verify_rejected": 1, "must_fix": 2, "good_to_fix": 3}}, "derived_by_reviewers": [], "coders": {}}
 EOF
-cat > "$T/repo/issues/archive/2026/07/01/issue-20__TYPE-review-stats.json" <<'EOF'
-{"issue": 20, "date": "2026-07-01T09:00:00", "reviewers": {"minimax": {"findings": 4, "gate_rejected": 0, "verify_rejected": 0, "must_fix": 3, "good_to_fix": 1}}, "derived": []}
+cat > "$T/repo/issues/archive/2026/07/01/issue-20__TYPE-agent-stats.json" <<'EOF'
+{"issue": 20, "started": "2026-07-01T09:00:00", "reviewers": {"minimax": {"findings": 4, "gate_rejected": 0, "verify_rejected": 0, "must_fix": 3, "good_to_fix": 1}}, "derived_by_reviewers": [], "coders": {}}
 EOF
-echo '{broken' > "$T/repo/issues/issue-9__TYPE-review-stats.json"
+echo '{broken' > "$T/repo/issues/issue-9__TYPE-agent-stats.json"
 
 # 테이블 출력 + 손상 내성
 OUT="$(python3 "$CLI" "$T/repo" 2>"$T/err")"; RC=$?

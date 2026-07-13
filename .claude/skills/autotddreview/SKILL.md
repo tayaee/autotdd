@@ -171,21 +171,26 @@ If not done, the execution session runs inline, in this order:
 6. **refix-plan 산출**: `issues/issue-N__TYPE-refix-plan.md` — 리뷰어별
    finding 수, 분류 결과, reject 사유("증거 미비"/"재검증 실패" 구분),
    생성된 파생 이슈 목록. (Step 3의 done check가 이 파일 기준.)
-7. **review-stats JSON 기록** (issue-43 스코어보드 CLI의 기초 자료):
-   같은 판정 데이터를 `issues/issue-N__TYPE-review-stats.json`으로
-   기록한다. 필수 필드 — `issue`(번호), `date`(ISO 8601),
+7. **agent-stats JSON 병합 기록** (issue-43 스코어보드 CLI의 기초 자료):
+   같은 판정 데이터를, tdd2가 이미 만들어 둔
+   `issues/issue-N__TYPE-agent-stats.json`(기존 `issue`/`started`/
+   `coders` 필드 보존)에 병합 기록한다. 추가하는 필수 필드 —
    `reviewers`(리뷰어 base명 key별: `model` / `findings` /
    `gate_rejected` / `verify_rejected` / `must_fix` / `good_to_fix`),
-   `derived`(생성된 파생 이슈 파일명 목록). `.json`은 `.md` 열거에
-   걸리지 않으므로 파이프라인에 중립 — 집계는 CLI 몫, 여기서는 기록만.
+   `derived_by_reviewers`(생성된 파생 이슈 파일명 목록). `.json`은 `.md`
+   열거에 걸리지 않으므로 파이프라인에 중립 — 집계는 CLI 몫, 여기서는
+   기록만.
    - `reviewers` 각 항목의 `model` 필드는 해당 리뷰 파일
      (`issues/issue-N__TYPE-code-review__BY-<X>.md`) **첫 줄의 버전
      포함 모델명**을 그대로 전사한다. 키는 base명 유지(스코어보드 집계
      단위 불변). 첫 줄에서 모델명을 얻지 못하면 `"unknown"`을 기록한다
      (**침묵 금지** — 필드 누락 금지). 래퍼 뒤 모델이 업그레이드되어도
      stats 한 줄에 전후 이력이 섞이지 않게 한다 (issue-44).
-8. **coding-stats JSON 병합 기록**: `review-stats.json`을 기록하는 동일한 시점에, 기존 `issues/issue-N__TYPE-coding-stats.json` 파일을 읽어 `coders.<base명>.review_outcome`을 채워 넣는다.
-   - 키 `<base명>`은 기존 `coders`의 키(Step 1에서 tdd2가 생성한 키)를 그대로 사용하며, 새 coder를 추가하지 않는다.
+8. **`coders.<base명>.review_outcome` 병합**: 위와 **같은 write 호출**로
+   (파일이 하나이므로 별도 read-modify-write가 아니다), 같은
+   `issues/issue-N__TYPE-agent-stats.json`의 `coders.<base명>.review_outcome`을
+   채워 넣는다.
+   - 키 `<base명>`은 기존 `coders`의 키(tdd2가 Step 5/11에서 생성한 키)를 그대로 사용하며, 새 coder를 추가하지 않는다.
    - `review_outcome` 스키마:
      ```json
      "review_outcome": {
@@ -202,12 +207,12 @@ If any reviewer files are missing (from failed reviewers in Step 2), prepend a n
 
 ### Step 4 — Coder re-fix (skip if done)
 
-**Done check**: every `issues/issue-N__TYPE-*` file (code-review들, refix-plan, review-stats.json, coding-stats.json) has been moved to `issues/archive/<YYYY>/<MM>/<DD>/` — 파일명 그대로, `git mv`로.
+**Done check**: every `issues/issue-N__TYPE-*` file (code-review들, refix-plan, agent-stats.json) has been moved to `issues/archive/<YYYY>/<MM>/<DD>/` — 파일명 그대로, `git mv`로.
 
 If not done:
 The execution session runs:
 - Step 3가 생성한 파생 이슈 중 **pending인 것만** (`issues/issue-*-fixing-N.md` — 태그 없는 파일) `/autotdd`로 처리한다 (passing `worktree` if the original run specified `worktree`). `__STATE-later` 파킹 파생 이슈는 **건드리지 않는다** — 사람이 STATE 태그를 지워 승격할 때까지 대기.
-- After completing, archive `issues/issue-N__TYPE-code-review__BY-*.md`, `issues/issue-N__TYPE-refix-plan.md`, `issues/issue-N__TYPE-review-stats.json`, `issues/issue-N__TYPE-coding-stats.json` to `issues/archive/YYYY/MM/DD/` using `aacp`.
+- 이 이슈의 `__TYPE-*` 산출물(code-review들, refix-plan, agent-stats.json)은 별도로 `git mv`하지 않는다 — 이 이슈에 대해 `aacp`(`.claude/skills/acpd/aacp.sh`)를 호출하면 `issue-N.md`와 함께 자동으로 아카이브된다(agent-stats.json은 그 과정에서 `archived`/`duration`도 함께 채워짐 — issue-47).
 
 ## Failure policy
 

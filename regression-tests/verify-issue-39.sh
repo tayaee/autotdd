@@ -41,7 +41,7 @@ spec_has "영문자로 시작" "엄격성: 슬러그 영문자 시작"
 spec_has "닫힌 집합" "엄격성: KEY 닫힌 집합"
 spec_has "예약값" "엄격성: BY-self 예약값"
 spec_has "fixing-<" "파생 슬러그 관행 fixing-<M>"
-spec_has "review-stats" "md 외 확장자(review-stats.json) 확장 명기"
+spec_has "agent-stats" "md 외 확장자(agent-stats.json) 확장 명기"
 spec_has "review-result" "레거시 review-result 불변 규칙"
 
 # ----- 2. SKILL.md 4종: 신규 문법 존재 -----
