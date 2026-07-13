@@ -79,6 +79,13 @@ _Avoid_: 구 스킬명, 멀티모델 루프, --coder/--planner 플래그
 이어서 하는 자기 검토가 아니다. 산출 파일명의 리뷰어 자리는 `self`로 고정한다.
 _Avoid_: 자기 검토, 자체 리뷰
 
+**승격률**:
+리뷰어 평가의 정본 지표 — 리뷰어가 낸 finding 중 플래너(기계)가 must-fix 또는
+good-to-fix로 승격한 비율. 플래너의 판정(증거 게이트 + must-fix 재검증)이 기준이며,
+파킹된 good-to-fix를 사람이 나중에 승격했는지/방치했는지는 이 지표에 반영하지 않는다
+— 사람 판단은 드물고 느려 표본이 되지 못하므로 의도적으로 제외한 것이다.
+_Avoid_: 수용률, 최종 수용률, 사람 승인율
+
 **worktree 격리**:
 자동화 루프의 agent(autoqa, autofix, autodev)는 항상 일회용 git worktree에서 작업하고,
 사람은 main tree에서 작업한다는 규칙. agent의 실패 처리는 worktree 폐기로 끝나며 main

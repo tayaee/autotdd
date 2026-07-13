@@ -117,3 +117,54 @@ def test_missing_issues_dir_fails_loudly(tmp_path: Path) -> None:
     proc = run_cli(str(repo))
     assert proc.returncode == 1
     assert proc.stderr.strip() != ""
+
+
+def test_model_field_does_not_affect_aggregation(tmp_path: Path) -> None:
+    """issue-44: reviewer 항목의 `model` 필드는 집계에 영향 없음.
+
+    스코어보드는 COUNT_KEYS만 합산하므로 미지 필드(model)는 자동으로
+    무시되어야 한다 — 래퍼 버전이 바뀌어도 누적 데이터가 섞이지 않게
+    보존되는 동작이다. 이 테스트는 그 계약을 고정한다.
+    """
+    repo = make_repo(tmp_path)
+    write_stats(repo / "issues", 21, "2026-07-01T10:00:00", {
+        "qwen": {
+            "model": "qwen 3 max preview",
+            "findings": 10, "gate_rejected": 4, "verify_rejected": 1,
+            "must_fix": 2, "good_to_fix": 3,
+        },
+    })
+    proc = run_cli(str(repo), "--json")
+    assert proc.returncode == 0
+    data = json.loads(proc.stdout)
+    q = data["reviewers"]["qwen"]
+    assert q["findings"] == 10
+    assert q["must_fix"] == 2
+    assert q["good_to_fix"] == 3
+    assert q["promotion_rate"] == 0.5
+
+
+def test_model_field_table_output_matches_without_model(tmp_path: Path) -> None:
+    """issue-44: model 필드 있어도 테이블 출력은 동일해야 한다."""
+    repo_a = make_repo(tmp_path / "a")
+    repo_b = make_repo(tmp_path / "b")
+    write_stats(repo_a / "issues", 21, "2026-07-01T10:00:00", {
+        "qwen": {
+            "model": "Qwen 3 Max",
+            "findings": 10, "gate_rejected": 4, "verify_rejected": 1,
+            "must_fix": 2, "good_to_fix": 3,
+        },
+    })
+    write_stats(repo_b / "issues", 21, "2026-07-01T10:00:00", {
+        "qwen": {
+            "findings": 10, "gate_rejected": 4, "verify_rejected": 1,
+            "must_fix": 2, "good_to_fix": 3,
+        },
+    })
+    out_a = run_cli(str(repo_a)).stdout
+    out_b = run_cli(str(repo_b)).stdout
+    # 승격률·finding·must/good 등 숫자가 동일하면 통과 (헤더는 동일)
+    assert "50.0%" in out_a and "50.0%" in out_b
+    # 두 출력에서 모델명은 어디에도 나오면 안 됨 (집계 단위는 base명)
+    assert "Qwen 3 Max" not in out_a
+    assert "qwen 3 max" not in out_a.lower()

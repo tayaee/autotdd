@@ -159,6 +159,11 @@ If not done, the execution session runs inline, in this order:
    - must-fix → `issues/issue-<신번호>-fixing-<N>.md` (pending)
    - good-to-fix → `issues/issue-<신번호>-fixing-<N>__STATE-later.md`
      (파킹 — 사람이 STATE 태그를 지워 승격할 때까지 파이프라인 제외)
+   - **중복 finding 규칙** (issue-44): 복수 리뷰어가 같은 결함을 독립
+     발견해 승격된 경우 — 파생 이슈는 **1개만** 생성한다(계보에 복수
+     리뷰 파일 인용). stats의 must_fix/good_to_fix 카운트는 **발견한
+     리뷰어 전원**에게 각각 +1. 최초 발견자 개념은 두지 않는다(병렬
+     실행이므로 무의미).
    - 채번: issues/ + issues/archive/ 전체에서 **최대 번호 + 1** (번호
      재사용 금지). 생성 직전 기존 번호를 재확인한다.
    - 본문 **계보** 필수: 원본 이슈 번호, 출처 리뷰 파일명, 해당 finding
@@ -169,10 +174,16 @@ If not done, the execution session runs inline, in this order:
 7. **review-stats JSON 기록** (issue-43 스코어보드 CLI의 기초 자료):
    같은 판정 데이터를 `issues/issue-N__TYPE-review-stats.json`으로
    기록한다. 필수 필드 — `issue`(번호), `date`(ISO 8601),
-   `reviewers`(리뷰어 base명 key별: `findings` / `gate_rejected` /
-   `verify_rejected` / `must_fix` / `good_to_fix`), `derived`(생성된
-   파생 이슈 파일명 목록). `.json`은 `.md` 열거에 걸리지 않으므로
-   파이프라인에 중립 — 집계는 CLI 몫, 여기서는 기록만.
+   `reviewers`(리뷰어 base명 key별: `model` / `findings` /
+   `gate_rejected` / `verify_rejected` / `must_fix` / `good_to_fix`),
+   `derived`(생성된 파생 이슈 파일명 목록). `.json`은 `.md` 열거에
+   걸리지 않으므로 파이프라인에 중립 — 집계는 CLI 몫, 여기서는 기록만.
+   - `reviewers` 각 항목의 `model` 필드는 해당 리뷰 파일
+     (`issues/issue-N__TYPE-code-review__BY-<X>.md`) **첫 줄의 버전
+     포함 모델명**을 그대로 전사한다. 키는 base명 유지(스코어보드 집계
+     단위 불변). 첫 줄에서 모델명을 얻지 못하면 `"unknown"`을 기록한다
+     (**침묵 금지** — 필드 누락 금지). 래퍼 뒤 모델이 업그레이드되어도
+     stats 한 줄에 전후 이력이 섞이지 않게 한다 (issue-44).
 
 If any reviewer files are missing (from failed reviewers in Step 2), prepend a note in the planning context: "Note: The reviewer file for <failed-reviewer> was unavailable. Synthesize from the surviving files."
 
