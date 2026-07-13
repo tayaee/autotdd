@@ -88,19 +88,13 @@ def collect(repo: Path, since: date | None) -> tuple[dict[str, dict[str, int]], 
 
 
 def collect_coders(repo: Path, since: date | None) -> dict[str, dict]:
-    """구현자 coder-stats JSONL을 재귀 수집·집계.
+    """구현자 coding-stats JSON을 재귀 수집·집계.
 
-    한 파일 = 한 이슈. summary 라인의 `coder` 필드가 그 파일 전체의
-    coder 식별자이며, 같은 파일의 run 라인들은 그 식별자로 귀속된다.
-    summary가 없는 파일의 run들은 `orphan_runs` 키로 묶음.
-
-    손상 라인/누락 필드는 stderr 경고 후 계속(침묵 금지).
+    손상 파일/누락 필드는 stderr 경고 후 계속(침묵 금지).
     """
     issues_dir = repo / "issues"
     stats: dict[str, dict] = {}
-    for f in sorted(issues_dir.rglob("*__TYPE-coder-stats.jsonl")):
-        # 파일명에서 이슈 번호 추출 — `issue-N__TYPE-coder-stats.jsonl`
-        # 패턴에서 첫 `issue-` 직후의 정수만 가져온다.
+    for f in sorted(issues_dir.rglob("*__TYPE-coding-stats.json")):
         stem = f.stem
         prefix = "issue-"
         idx = stem.find(prefix)
@@ -117,91 +111,81 @@ def collect_coders(repo: Path, since: date | None) -> dict[str, dict]:
         if not digits:
             print(f"경고: {f} 파일명에서 이슈 번호 추출 불가 — 건너뜀", file=sys.stderr)
             continue
-        issue_n: int = int(digits)
+        issue_n = int(digits)
         try:
-            text = f.read_text(encoding="utf-8")
-        except OSError as exc:
-            print(f"경고: {f} 읽기 실패 — 건너뜀 ({exc})", file=sys.stderr)
+            data = json.loads(f.read_text(encoding="utf-8"))
+        except Exception as exc:
+            print(f"경고: {f} 파싱 불가 — 건너뜀 ({exc})", file=sys.stderr)
             continue
-
-        # 1차 패스: 라인 파싱 + 파일 coder 식별 + ts 필터
-        run_objs: list[dict] = []
-        summary_objs: list[dict] = []
-        file_coder: str | None = None
-        any_summary_seen = False
-        any_summary_kept = False
-        for lineno, line in enumerate(text.splitlines(), 1):
-            line = line.strip()
-            if not line:
+        if not isinstance(data, dict):
+            print(f"경고: {f} 객체 아님 — 건너뜀", file=sys.stderr)
+            continue
+        coders = data.get("coders")
+        if not isinstance(coders, dict):
+            print(f"경고: {f} 'coders' 필드가 없거나 객체가 아님 — 건너뜀", file=sys.stderr)
+            continue
+        for coder_id, coder_data in coders.items():
+            if not isinstance(coder_data, dict):
+                print(f"경고: {f} coder {coder_id} 데이터가 객체가 아님 — 건너뜀", file=sys.stderr)
                 continue
-            try:
-                obj = json.loads(line)
-            except json.JSONDecodeError as exc:
-                print(f"경고: {f}:{lineno} JSON 파싱 실패 — 건너뜀 ({exc})",
-                      file=sys.stderr)
+            model = coder_data.get("model")
+            if not isinstance(model, str) or not model:
+                print(f"경고: {f} coder {coder_id}에 model 필드 없거나 빈 문자열 — 건너뜀", file=sys.stderr)
                 continue
-            if not isinstance(obj, dict):
-                print(f"경고: {f}:{lineno} 객체 아님 — 건너뜀", file=sys.stderr)
-                continue
-            when = _parse_iso_date(obj.get("ts"))
-            if since is not None and when is not None and when < since:
-                continue
-            kind = obj.get("kind")
-            if kind == "summary":
-                any_summary_seen = True
-                coder_raw = obj.get("coder")
-                if not isinstance(coder_raw, str) or not coder_raw:
-                    print(f"경고: {f}:{lineno} summary에 coder 필드 없음 — 건너뜀",
-                          file=sys.stderr)
+            mvp = coder_data.get("mvp")
+            review_outcome = coder_data.get("review_outcome")
+            mvp_date = None
+            review_date = None
+            if isinstance(mvp, dict):
+                mvp_date = _parse_iso_date(mvp.get("ts"))
+            if isinstance(review_outcome, dict):
+                review_date = _parse_iso_date(review_outcome.get("ts"))
+            dates = [d for d in (mvp_date, review_date) if d is not None]
+            if since is not None:
+                if not dates or max(dates) < since:
                     continue
-                file_coder = coder_raw
-                any_summary_kept = True
-                summary_objs.append(obj)
-            elif kind == "run":
-                run_objs.append(obj)
-            else:
-                print(f"경고: {f}:{lineno} 알 수 없는 kind={kind!r} — 건너뜀",
-                      file=sys.stderr)
-
-        # 2차 패스: 집게 — summary coder가 있으면 그쪽으로, 없으면 orphan_runs
-        target_coder = file_coder if any_summary_kept else "orphan_runs"
-        agg = stats.setdefault(target_coder, _empty_coder_dict())
-        if any_summary_seen and not any_summary_kept:
-            # 파일에 summary는 있었지만 모두 무효 — coder 미확정. 경고만 이미 출력.
-            pass
-        for obj in run_objs:
-            agg["runs"] += 1
-            for k in ("errors", "fixed", "syntax_errors"):
-                v = obj.get(k)
-                try:
-                    agg[k] += int(v) if v is not None else 0
-                except (TypeError, ValueError):
-                    print(f"경고: {f} run 라인의 {k} 비정상 — 0으로 처리",
-                          file=sys.stderr)
-            if isinstance(obj.get("model"), str) and not agg["model"]:
-                agg["model"] = obj["model"]
-        for obj in summary_objs:
-            assert issue_n is not None  # 위에서 continue로 가드됨
+            agg = stats.setdefault(coder_id, _empty_coder_dict())
             agg["issues"].add(issue_n)
-            if isinstance(obj.get("model"), str) and not agg["model"]:
-                agg["model"] = obj["model"]
-            v = obj.get("loc_added")
-            try:
-                agg["loc_added"] += int(v) if v is not None else 0
-            except (TypeError, ValueError):
-                print(f"경고: {f} summary의 loc_added 비정상 — 0으로 처리",
-                      file=sys.stderr)
+            agg["model"] = model
+            if isinstance(mvp, dict):
+                loc = mvp.get("loc_added", 0)
+                try:
+                    agg["loc_added"] += int(loc) if loc is not None else 0
+                except (TypeError, ValueError):
+                    print(f"경고: {f} coder {coder_id} mvp.loc_added 값 비정상 — 0으로 처리", file=sys.stderr)
+                saf = mvp.get("static_analysis_failures")
+                if isinstance(saf, dict):
+                    for tool in ("ruff", "pyright"):
+                        val = saf.get(tool)
+                        if val is not None:
+                            try:
+                                val_int = int(val)
+                                if agg["static_analysis_failures"][tool] is None:
+                                    agg["static_analysis_failures"][tool] = val_int
+                                else:
+                                    agg["static_analysis_failures"][tool] += val_int
+                            except (TypeError, ValueError):
+                                print(f"경고: {f} coder {coder_id} mvp.static_analysis_failures.{tool} 값 비정상 — 건너뜀", file=sys.stderr)
+            if isinstance(review_outcome, dict):
+                for key, target_key in [("must_fix_count", "must_fix_count"),
+                                       ("good_to_fix_count", "good_to_fix_count"),
+                                       ("refix_plans_written", "refix_plans_written")]:
+                    val = review_outcome.get(key, 0)
+                    try:
+                        agg[target_key] += int(val) if val is not None else 0
+                    except (TypeError, ValueError):
+                        print(f"경고: {f} coder {coder_id} review_outcome.{key} 값 비정상 — 0으로 처리", file=sys.stderr)
     return stats
 
 
 def _empty_coder_dict() -> dict:
     return {
         "issues": set(),
-        "runs": 0,
-        "errors": 0,
-        "fixed": 0,
-        "syntax_errors": 0,
         "loc_added": 0,
+        "static_analysis_failures": {"ruff": None, "pyright": None},
+        "must_fix_count": 0,
+        "good_to_fix_count": 0,
+        "refix_plans_written": 0,
         "model": "",
     }
 
@@ -210,14 +194,6 @@ def promotion_rate(agg: dict[str, int]) -> float:
     if agg["findings"] <= 0:
         return 0.0
     return (agg["must_fix"] + agg["good_to_fix"]) / agg["findings"]
-
-
-def defect_density_per_kloc(agg: dict) -> float:
-    """defect 밀도 = (errors + fixed) / loc_added * 1000. 0라인 가드."""
-    loc = agg.get("loc_added", 0)
-    if loc <= 0:
-        return 0.0
-    return (agg.get("errors", 0) + agg.get("fixed", 0)) / loc * 1000
 
 
 def render_table(
@@ -239,25 +215,45 @@ def render_table(
     lines.append("해석: 승격률이 지속적으로 낮은 리뷰어는 교체 후보 — 단 표본(사이클·finding)이 적으면 판단 유보.")
     if coders:
         lines.append("")
-        lines.append("=== coder 섹션 (정적분석 ruff/pyright 결과) ===")
+        lines.append("=== coder 섹션 ===")
         coder_rows = sorted(
             coders.items(),
-            key=lambda kv: defect_density_per_kloc(kv[1]),
+            key=lambda kv: (
+                (
+                    ((kv[1]["static_analysis_failures"]["ruff"] or 0) +
+                     (kv[1]["static_analysis_failures"]["pyright"] or 0) +
+                     kv[1]["must_fix_count"]) / kv[1]["loc_added"] * 1000
+                ) if kv[1]["loc_added"] > 0 else 0.0
+            ),
             reverse=True,
         )
-        coder_header = (f"{'coder':<12} {'이슈':>5} {'run':>5} {'loc_added':>10} "
-                        f"{'errors':>7} {'fixed':>6} {'syntax':>7} "
-                        f"{'defect/kloc':>12}")
+        coder_header = (
+            f"{'coder':<12} {'이슈':>5} {'loc_added':>10} "
+            f"{'ruff':>6} {'pyright':>8} {'must':>5} {'good':>5} {'refix':>6} "
+            f"{'density':>8} {'static':>7} {'review':>7}"
+        )
         lines.append(coder_header)
         lines.append("-" * len(coder_header))
         for name, agg in coder_rows:
+            loc = agg["loc_added"]
+            ruff = agg["static_analysis_failures"]["ruff"]
+            pyright = agg["static_analysis_failures"]["pyright"]
+            static_fail_sum = (ruff or 0) + (pyright or 0)
+            must_fix = agg["must_fix_count"]
+            good = agg["good_to_fix_count"]
+            refix = agg["refix_plans_written"]
+            density = (static_fail_sum + must_fix) / loc * 1000 if loc > 0 else 0.0
+            static_density = static_fail_sum / loc * 1000 if loc > 0 else 0.0
+            review_density = must_fix / loc * 1000 if loc > 0 else 0.0
+            ruff_str = str(ruff) if ruff is not None else "-"
+            pyright_str = str(pyright) if pyright is not None else "-"
             lines.append(
-                f"{name:<12} {len(agg['issues']):>5} {agg['runs']:>5} {agg['loc_added']:>10} "
-                f"{agg['errors']:>7} {agg['fixed']:>6} {agg['syntax_errors']:>7} "
-                f"{defect_density_per_kloc(agg):>12.1f}"
+                f"{name:<12} {len(agg['issues']):>5} {loc:>10} "
+                f"{ruff_str:>6} {pyright_str:>8} {must_fix:>5} {good:>5} {refix:>6} "
+                f"{density:>8.1f} {static_density:>7.1f} {review_density:>7.1f}"
             )
         lines.append("")
-        lines.append("해석: defect/kloc이 지속적으로 높은 coder는 기초 코딩 점검 후보.")
+        lines.append("해석: density가 지속적으로 높은 coder는 기초 코딩 및 리뷰 점검 후보.")
     return "\n".join(lines)
 
 
@@ -272,15 +268,25 @@ def render_json(
     }
     coders_out: dict[str, dict] = {}
     for name, agg in coders.items():
+        loc = agg["loc_added"]
+        ruff = agg["static_analysis_failures"]["ruff"]
+        pyright = agg["static_analysis_failures"]["pyright"]
+        static_fail_sum = (ruff or 0) + (pyright or 0)
+        must_fix = agg["must_fix_count"]
+        density = (static_fail_sum + must_fix) / loc * 1000 if loc > 0 else 0.0
+        static_density = static_fail_sum / loc * 1000 if loc > 0 else 0.0
+        review_density = must_fix / loc * 1000 if loc > 0 else 0.0
         coders_out[name] = {
             "issues": sorted(agg["issues"]),
-            "runs": agg["runs"],
-            "errors": agg["errors"],
-            "fixed": agg["fixed"],
-            "syntax_errors": agg["syntax_errors"],
-            "loc_added": agg["loc_added"],
+            "loc_added": loc,
+            "static_analysis_failures": agg["static_analysis_failures"],
+            "must_fix_count": must_fix,
+            "good_to_fix_count": agg["good_to_fix_count"],
+            "refix_plans_written": agg["refix_plans_written"],
             "model": agg["model"],
-            "defect_density_per_kloc": defect_density_per_kloc(agg),
+            "defect_density_per_kloc": round(density, 1),
+            "static_density_per_kloc": round(static_density, 1),
+            "review_density_per_kloc": round(review_density, 1),
         }
     return {
         "cycles": cycles,

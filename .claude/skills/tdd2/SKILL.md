@@ -165,6 +165,11 @@ failure has an unambiguous line between what's live and what isn't.
    directory — invoke with `bash`, CWD at the repo root; never copy it
    into the project). `run-pyright` is scoped to `src/`, fast.
    Failure → fix code, restart from 5.
+
+   **coding-stats 계측**: 시작 시 `git rev-parse HEAD`를 `<시작HEAD>`로
+   기록한다 (Step 11의 loc_added 산출용). ruff/pyright 각각 실패해 "restart from 5"할
+   때마다 실행 세션이 자기 작업 컨텍스트 안에서 카운터(실패 횟수)를 증가시킨다
+   (파일 I/O 없음). pytest/회귀 스크립트는 계측하지 않는다.
 6. `uv run python -m compileall . -q`. Failure → fix code, restart from 5.
 7. `run-unit-tests` (full suite) — same project-or-default resolution
    as step 5. Failure → fix code, restart from 5.
@@ -217,6 +222,30 @@ failure has an unambiguous line between what's live and what isn't.
     timestamp (ISO 8601), changed files, deviation from plan (or
     "없음"), and the verify result (this script's pass/fail +
     regression suite status).
+
+    **coding-stats.json 최초 생성**: 위 갱신 직전, `issues/issue-<#N>__TYPE-coding-stats.json`
+    파일을 생성 또는 갱신한다:
+    ```json
+    {
+      "issue": <이슈번호>,
+      "coders": {
+        "<base명>": {
+          "model": "<버전 포함 모델명>",
+          "mvp": {
+            "ts": "<ISO8601>",
+            "loc_added": <loc_added 수치>,
+            "static_analysis_failures": {
+              "ruff": <ruff 실패 횟수>,
+              "pyright": <pyright 실패 횟수>
+            }
+          }
+        }
+      }
+    }
+    ```
+    - `loc_added`는 `<시작HEAD>..HEAD` 전 파일의 `git diff --numstat` added 합 (삭제·바이너리 제외).
+    - `ruff` / `pyright` 실패 횟수는 Step 5에서 세션이 카운트한 값이며, 해당 도구가 프로젝트 미지원(pyproject.toml 없음 등)으로 실행 안 된 경우 `null`로 기록한다.
+    - 파일이 이미 존재하면 `mvp` 섹션만 덮어쓰고 기존 `review_outcome` 섹션이 존재할 경우 보존한다.
 12. `git add` everything: migration files, code, the updated issue
     file, any `.conflict-with-` notes.
 13. **Stop.** Report what was implemented and that it's ready for

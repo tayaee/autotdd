@@ -184,17 +184,30 @@ If not done, the execution session runs inline, in this order:
      단위 불변). 첫 줄에서 모델명을 얻지 못하면 `"unknown"`을 기록한다
      (**침묵 금지** — 필드 누락 금지). 래퍼 뒤 모델이 업그레이드되어도
      stats 한 줄에 전후 이력이 섞이지 않게 한다 (issue-44).
+8. **coding-stats JSON 병합 기록**: `review-stats.json`을 기록하는 동일한 시점에, 기존 `issues/issue-N__TYPE-coding-stats.json` 파일을 읽어 `coders.<base명>.review_outcome`을 채워 넣는다.
+   - 키 `<base명>`은 기존 `coders`의 키(Step 1에서 tdd2가 생성한 키)를 그대로 사용하며, 새 coder를 추가하지 않는다.
+   - `review_outcome` 스키마:
+     ```json
+     "review_outcome": {
+       "ts": "<ISO8601>",
+       "findings_received": <이 리뷰어로부터 받은 총 finding 수>,
+       "must_fix_count": <이 리뷰어의 finding 중 실질 재검증을 통과해 파생 이슈로 생성된 must-fix 수>,
+       "good_to_fix_count": <이 리뷰어의 finding 중 good-to-fix 분류 수>,
+       "refix_plans_written": <이 이슈 사이클에서 플래너가 refix-plan을 작성했으면 1, 리뷰 파일이 없어 작성하지 못했으면 0>
+     }
+     ```
+   - 만약 리뷰 파일이 하나도 없어 refix-plan 자체를 작성하지 못하는 예외 상황인 경우, `review_outcome.refix_plans_written = 0`과 함께 나머지 수치 필드들을 모두 `0`으로 채워 기록한다.
 
 If any reviewer files are missing (from failed reviewers in Step 2), prepend a note in the planning context: "Note: The reviewer file for <failed-reviewer> was unavailable. Synthesize from the surviving files."
 
 ### Step 4 — Coder re-fix (skip if done)
 
-**Done check**: every `issues/issue-N__TYPE-*` file (code-review들, refix-plan, review-stats.json, coder-stats.jsonl) has been moved to `issues/archive/<YYYY>/<MM>/<DD>/` — 파일명 그대로, `git mv`로.
+**Done check**: every `issues/issue-N__TYPE-*` file (code-review들, refix-plan, review-stats.json, coding-stats.json) has been moved to `issues/archive/<YYYY>/<MM>/<DD>/` — 파일명 그대로, `git mv`로.
 
 If not done:
 The execution session runs:
-- Step 3가 생성한 파생 이슈 중 **pending인 것만** (`issues/issue-*-fixing-N.md` — 태그 없는 파일) `/autotdd`로 처리한다 (passing `worktree` if the original run specified `worktree`). `__STATE-later` 파킹 파생 이슈는 **건드리지 않는다** — 사람이 승격할 때까지 대기.
-- After completing, archive `issues/issue-N__TYPE-code-review__BY-*.md`, `issues/issue-N__TYPE-refix-plan.md`, `issues/issue-N__TYPE-review-stats.json`, `issues/issue-N__TYPE-coder-stats.jsonl` (issue-45) to `issues/archive/YYYY/MM/DD/` using `aacp`.
+- Step 3가 생성한 파생 이슈 중 **pending인 것만** (`issues/issue-*-fixing-N.md` — 태그 없는 파일) `/autotdd`로 처리한다 (passing `worktree` if the original run specified `worktree`). `__STATE-later` 파킹 파생 이슈는 **건드리지 않는다** — 사람이 STATE 태그를 지워 승격할 때까지 대기.
+- After completing, archive `issues/issue-N__TYPE-code-review__BY-*.md`, `issues/issue-N__TYPE-refix-plan.md`, `issues/issue-N__TYPE-review-stats.json`, `issues/issue-N__TYPE-coding-stats.json` to `issues/archive/YYYY/MM/DD/` using `aacp`.
 
 ## Failure policy
 
