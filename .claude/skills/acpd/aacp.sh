@@ -108,6 +108,15 @@ shopt -u nullglob
 for tf in "${TYPE_FILES[@]}"; do
   case "$tf" in
     *__TYPE-agent-stats.json)
+      # cost_summary는 이 이슈의 모든 LLM 작업(mvp/review/refix-plan/
+      # refix)이 이미 끝난 이 시점에 cost_details를 스캔해 계산한다 —
+      # archived/duration을 채우는 agent-stats-archive.py보다 먼저.
+      # tools/log-cost-summary.py는 이 저장소 전용 도구라 모든 대상
+      # repo에 있는 게 아니다 — deploy.sh와 같은 방식으로 있으면 쓰고
+      # 없으면 조용히 건너뛴다(실패 아님).
+      if [ -f tools/log-cost-summary.py ]; then
+        uv run tools/log-cost-summary.py "$REPO_ROOT" "${STREAM}-${N}"
+      fi
       uv run "$DEFAULTS_DIR/agent-stats-archive.py" "$REPO_ROOT" "${STREAM}-${N}"
       ;;
   esac

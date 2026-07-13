@@ -125,13 +125,25 @@ If not done:
 
 #### 실행
 
-For each undone reviewer, launch:
-- **External Reviewers**: For each reviewer `<X>`, launch in parallel:
+For each undone reviewer, launch (모든 `tools/log-cost-*.sh` 호출은 Windows에서
+`.bat`/`.ps1` 동일 인자로 대체 가능 — pydantic이 필요해 항상 `uv run`을
+거치는 얇은 wrapper이며 셋 다 같은 `tools/log-cost-*.py`를 감싼다):
+- **External Reviewers**: For each reviewer `<X>`, before launching call
+  `tools/log-cost-<X>.sh <repo-path> issue-<N> "before review"`, then launch
+  in parallel:
   ```bash
   /home/user1/git/harness-project/.local/bin/<X>-cli.sh -p "<위 4부 구조로 조립한 프롬프트 — 산출 파일: issues/issue-<N>__TYPE-code-review__BY-<X>.md>"
   ```
-- **Self-Review**: If no reviewers were specified, launch a subagent in a new context (do not review inline in the same conversation) to write:
+  When that reviewer's launch returns, call
+  `tools/log-cost-<X>.sh <repo-path> issue-<N> "after review"` (같은 `<X>`).
+  리뷰어별로 개별 before/after 쌍 — N명이면 `cost_details`에 2N항목.
+- **Self-Review**: If no reviewers were specified, before launching call
+  `tools/log-cost-<orchestrator base명>.sh <repo-path> issue-<N> "before review"`
+  (오케스트레이팅 세션 자신의 base명, 예: `sonnet`), then launch a subagent
+  in a new context (do not review inline in the same conversation) to write:
   `issues/issue-N__TYPE-code-review__BY-self.md`. 셀프 리뷰 서브에이전트의 프롬프트에도 위 4부 구조를 동일하게 적용한다 (모델명 첫 줄 기입 포함).
+  서브에이전트가 반환하면 같은 base명으로
+  `tools/log-cost-<orchestrator base명>.sh <repo-path> issue-<N> "after review"`를 호출한다.
 
 Failure of one reviewer does NOT stop the others (continue-with-partial). When all parallel launches return, verify each output file exists and is non-empty. Note any failures for step 3.
 
@@ -139,7 +151,11 @@ Failure of one reviewer does NOT stop the others (continue-with-partial). When a
 
 **Done check**: `issues/issue-N__TYPE-refix-plan.md` exists and is non-empty.
 
-If not done, the execution session runs inline, in this order:
+If not done, first call
+`tools/log-cost-<orchestrator base명>.sh <repo-path> issue-<N> "before refix-plan"`
+(오케스트레이팅 세션 자신의 base명 — 이 단계는 외부 wrapper 없이 실행
+세션이 직접 수행하므로 Step 2 셀프 리뷰와 동일한 base명). 그 다음, the
+execution session runs inline, in this order:
 
 1. **수집**: Read all available review files matching
    `issues/issue-N__TYPE-code-review__BY-*.md`.
@@ -219,6 +235,9 @@ If not done, the execution session runs inline, in this order:
      }
      ```
    - 만약 리뷰 파일이 하나도 없어 refix-plan 자체를 작성하지 못하는 예외 상황인 경우, `review_outcome.refix_plans_written = 0`과 함께 나머지 수치 필드들을 모두 `0`으로 채워 기록한다.
+9. **cost_details 계측 — "after refix-plan"**: 위 7·8번 write 직후,
+   `tools/log-cost-<orchestrator base명>.sh <repo-path> issue-<N> "after refix-plan"`을
+   호출한다(이 단계 시작 시 쓴 "before refix-plan"과 같은 base명).
 
 If any reviewer files are missing (from failed reviewers in Step 2), prepend a note in the planning context: "Note: The reviewer file for <failed-reviewer> was unavailable. Synthesize from the surviving files."
 
@@ -228,8 +247,18 @@ If any reviewer files are missing (from failed reviewers in Step 2), prepend a n
 
 If not done:
 The execution session runs:
+- **cost_details 계측 — "before refix"**: 파생 이슈 처리를 시작하기 전,
+  `tools/log-cost-<base명>.sh <repo-path> issue-<N> "before refix"`를
+  호출한다(`<base명>`은 이 이슈의 `agent-stats.json`의 `coders` 키 —
+  Step 1의 coder와 동일). Step 4 전체를 감싸는 **한 쌍만** 원본 이슈에
+  남긴다 — 파생 이슈가 여러 개여도 각 파생 이슈 자신의 mvp 비용은 그
+  이슈 자신의 `agent-stats.json`에 tdd2가 별도로 기록하므로 여기서
+  중복 계측하지 않는다.
 - Step 3가 생성한 파생 이슈 중 **pending인 것만** (`issues/issue-*-fixing-N.md` — 태그 없는 파일) `/autotdd`로 처리한다 (passing `worktree` if the original run specified `worktree`). `__STATE-later` 파킹 파생 이슈는 **건드리지 않는다** — 사람이 STATE 태그를 지워 승격할 때까지 대기.
-- 이 이슈의 `__TYPE-*` 산출물(code-review들, refix-plan, agent-stats.json)은 별도로 `git mv`하지 않는다 — 이 이슈에 대해 `aacp`(`.claude/skills/acpd/aacp.sh`)를 호출하면 `issue-N.md`와 함께 자동으로 아카이브된다(agent-stats.json은 그 과정에서 `archived`/`duration`도 함께 채워짐 — issue-47).
+- **cost_details 계측 — "after refix"**: 위 파생 이슈 처리가 모두
+  끝난 직후, `tools/log-cost-<base명>.sh <repo-path> issue-<N> "after refix"`를
+  호출한다(같은 `<base명>`).
+- 이 이슈의 `__TYPE-*` 산출물(code-review들, refix-plan, agent-stats.json)은 별도로 `git mv`하지 않는다 — 이 이슈에 대해 `aacp`(`.claude/skills/acpd/aacp.sh`)를 호출하면 `issue-N.md`와 함께 자동으로 아카이브된다(agent-stats.json은 그 과정에서 `archived`/`duration`도 함께 채워짐 — issue-47, `cost_summary`도 이때 같이 계산되어 채워짐).
 
 ## Failure policy
 

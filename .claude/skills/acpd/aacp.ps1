@@ -101,6 +101,16 @@ git mv $IssueFile "$ArchiveDir/issue-$IssueNum.md"
 $TypeFiles = Get-ChildItem -Path "issues" -Filter "issue-$IssueNum`__TYPE-*" -File -ErrorAction SilentlyContinue
 foreach ($tf in $TypeFiles) {
     if ($tf.Name -like "*__TYPE-agent-stats.json") {
+        # cost_summary는 이 이슈의 모든 LLM 작업이 이미 끝난 이 시점에
+        # cost_details를 스캔해 계산한다 -- archived/duration을 채우는
+        # agent-stats-archive.py보다 먼저. tools/log-cost-summary.py는
+        # 이 저장소 전용 도구라 모든 대상 repo에 있는 게 아니므로
+        # deploy.ps1과 같은 방식으로 있으면 쓰고 없으면 조용히 건너뛴다.
+        $CostSummaryScript = Join-Path $RepoRoot "tools/log-cost-summary.py"
+        if (Test-Path $CostSummaryScript) {
+            uv run $CostSummaryScript $RepoRoot "issue-$IssueNum"
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+        }
         uv run (Join-Path $DefaultsDir "agent-stats-archive.py") $RepoRoot "issue-$IssueNum"
         if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     }
