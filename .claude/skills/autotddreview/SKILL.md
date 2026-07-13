@@ -189,12 +189,12 @@ If any reviewer files are missing (from failed reviewers in Step 2), prepend a n
 
 ### Step 4 — Coder re-fix (skip if done)
 
-**Done check**: every `issues/issue-N__TYPE-*` file (code-review들, refix-plan, review-stats.json) has been moved to `issues/archive/<YYYY>/<MM>/<DD>/` — 파일명 그대로, `git mv`로.
+**Done check**: every `issues/issue-N__TYPE-*` file (code-review들, refix-plan, review-stats.json, coder-stats.jsonl) has been moved to `issues/archive/<YYYY>/<MM>/<DD>/` — 파일명 그대로, `git mv`로.
 
 If not done:
 The execution session runs:
 - Step 3가 생성한 파생 이슈 중 **pending인 것만** (`issues/issue-*-fixing-N.md` — 태그 없는 파일) `/autotdd`로 처리한다 (passing `worktree` if the original run specified `worktree`). `__STATE-later` 파킹 파생 이슈는 **건드리지 않는다** — 사람이 승격할 때까지 대기.
-- After completing, archive `issues/issue-N__TYPE-code-review__BY-*.md`, `issues/issue-N__TYPE-refix-plan.md`, `issues/issue-N__TYPE-review-stats.json` to `issues/archive/YYYY/MM/DD/` using `aacp`.
+- After completing, archive `issues/issue-N__TYPE-code-review__BY-*.md`, `issues/issue-N__TYPE-refix-plan.md`, `issues/issue-N__TYPE-review-stats.json`, `issues/issue-N__TYPE-coder-stats.jsonl` (issue-45) to `issues/archive/YYYY/MM/DD/` using `aacp`.
 
 ## Failure policy
 

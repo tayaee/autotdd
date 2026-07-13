@@ -33,7 +33,7 @@ grill 세션 2026-07-12 합의)
 
 | 태그 | 값 | 뜻 |
 |---|---|---|
-| `__TYPE-` | `code-review` \| `refix-plan` \| (확장 가능) | 산출물 종류 — 작업 아님 |
+| `__TYPE-` | `code-review` \| `refix-plan` \| `review-stats` \| `coder-stats` \| (확장 가능) | 산출물 종류 — 작업 아님 |
 | `__STATE-` | `later` \| `manual` \| `agent-failed` | 파킹 — 지금 안 함 |
 | `__BY-` | 래퍼 base명 (`qwen`, `sonnet`, …) 또는 `self` | 작성자 (code-review에 필수, refix-plan엔 없음) |
 
@@ -119,6 +119,7 @@ issue-21__TYPE-code-review__BY-qwen.md    산출물: qwen의 리뷰
 issue-21__TYPE-code-review__BY-self.md    산출물: 셀프 리뷰
 issue-21__TYPE-refix-plan.md              산출물: 리뷰 종합 수정계획
 issue-21__TYPE-review-stats.json          산출물: 판정 통계 (기계용)
+issue-21__TYPE-coder-stats.jsonl          산출물: 구현자 통계 (정적분석) (issue-45)
 ```
 
 핵심 한 문장: **`__` 뒤는 기계가 읽고(판정), `-` 슬러그는 사람이
