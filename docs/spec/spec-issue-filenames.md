@@ -36,7 +36,7 @@ grill 세션 2026-07-12 합의)
 |---|---|---|
 | `__TYPE-` | `code-review` \| `refix-plan` \| `agent-stats` \| (확장 가능) | 산출물 종류 — 작업 아님 |
 | `__STATE-` | `later` \| `manual` \| `agent-failed` | 파킹 — 지금 안 함 |
-| `__BY-` | 래퍼 base명 (`qwen`, `sonnet`, …) 또는 `self` | 작성자 (code-review에 필수, refix-plan엔 없음) |
+| `__BY-` | 래퍼 base명 (`qwen`, `sonnet`, …) 또는 `self` | 작성자 (code-review에 필수, refix-plan엔 없음). **fixing 파생**에서 복수 작성자는 base명 알파벳 정렬 후 하이픈 연결(`__BY-gemini-qwen-sonnet`). `self`는 예약값으로 다른 리뷰어와 혼합 시 제외되고, self만 있으면 단독(`__BY-self`) |
 
 - `TYPE`은 확장 가능한 enum이다. 새 산출물 종류가 생기면 값만 추가하면
   되고 판정 규칙은 바뀌지 않는다.
@@ -103,6 +103,39 @@ grill 세션 2026-07-12 합의)
   리뷰 지적을 고치는 작업". `autofix-` 스트림과의 어휘 혼동을 피하려고
   `autofixing`이 아닌 `fixing`을 쓴다. 정확한 계보(출처 리뷰, finding
   인용)는 파일 본문에 기록한다.
+
+  **finding 슬러그(issue-48)**: agent가 자동 수정하는 티켓(must-fix /
+  good-to-fix 모두)에서 "어떤 finding을 고치는지" 파일명만으로 보이게 하기
+  위해, 슬러그는 **두 부분**으로 구성될 수 있다 — `fixing-<원본>-<finding-slug>`.
+  - `<finding-slug>` 결정 (helper `tools/derive_fixing_slug.py`, 결정적):
+    - **자동 추출**: 리뷰 산출물 본문에서 `### Finding: <title>` 헤더 첫 매칭
+    - **사람 override**: finding 본문에 `slug: <name>` 헤더 한 줄이 있으면
+      자동 추출 대신 그 값을 사용(override 우선)
+  - **정규화**: 자동 추출/override 모두 동일 정규화 적용 — lowercase →
+    `[^a-z0-9]+` → `-` → 연속 `-` 압축 → 양끝 strip → **50자 truncate**
+    (단어 경계에서 자름) → strip. override에도 동일 적용하여 파일명 형식이
+    항상 kebab-lowercase로 결정적이 되도록 한다.
+  - **슬러그 충돌**: 같은 issue 번호 내에서 동일 슬러그가 두 번 등장하면
+    `-2`, `-3`, ... suffix 자동 부여(최대 1000회 시도 후 ValueError).
+  - 형식 예: `issue-49-fixing-48-credential-exposure__BY-qwen.md`,
+    `issue-50-fixing-48-null-pointer__STATE-later__BY-gemini-qwen-sonnet.md`,
+    `issue-51-fixing-48-race-condition__STATE-later__BY-qwen-2.md` (충돌 suffix).
+
+- **finding 슬러그 + 작성 리뷰어 BY**: 모든 fixing 파생 이슈는 finding
+  슬러그와 함께 작성 리뷰어 `__BY-<...>` 태그를 가진다. 다중 작성자는
+  base명 알파벳 정렬 후 하이픈 연결(`__BY-gemini-qwen-sonnet`).
+  `__BY-self`는 예약값(셀프 리뷰)으로, 다른 리뷰어와 혼합 시 제외되며
+  self만 있으면 단독(`__BY-self`). 다중 리뷰어 정렬·충돌 suffix는
+  helper가 결정성 있게 처리하므로 같은 finding에 대해 항상 같은 파일명.
+
+- **레거시 호환**: 본 PR merge 이전 생성된 archived 파일
+  (`issue-127-fixing-123.md`, `issue-127-fixing-123__STATE-later.md`,
+  `__TYPE-code-review__BY-qwen.md` 등)은 **개명하지 않는다** (아카이브
+  불변 정책). 위 finding 슬러그 + BY 형식은 merge 이후 생성되는 모든 새
+  fixing 파생부터 적용한다. 같은 issue 번호(`issue-127-...` 식 ID)에
+  구·신 형식 파일이 공존할 수 있으나 ID 추출 정규식이 슬러그·태그를
+  무시하므로 pending 판정은 영향받지 않는다.
+
 - 리뷰어의 버전 정보(qwen3.6 등)는 파일명이 아니라 리뷰 파일 **본문 첫
   줄**에 기입한다. 파일명의 `__BY-` 값은 항상 래퍼 base명 — done-check가
   래퍼 이름만으로 결정적이 되도록.
@@ -112,14 +145,19 @@ grill 세션 2026-07-12 합의)
 ```
 issue-129.md                              pending
 issue-130-fixing-auth.md                  pending + 서술 슬러그
-issue-127-fixing-123.md                   pending 파생 (issue-123의 must-fix)
-issue-127-fixing-123__STATE-later.md      파킹 파생 (good-to-fix)
+issue-127-fixing-123.md                   pending 파생 (issue-123의 must-fix, v2 이전 형식 — 레거시 불변)
+issue-127-fixing-123__STATE-later.md      파킹 파생 (good-to-fix, v2 이전 형식 — 레거시 불변)
 issue-9__STATE-manual.md                  파킹: 사람 직접 처리
 autofix-8__STATE-agent-failed.md          파킹: 에이전트 실패 기록
 issue-21__TYPE-code-review__BY-qwen.md    산출물: qwen의 리뷰
 issue-21__TYPE-code-review__BY-self.md    산출물: 셀프 리뷰
 issue-21__TYPE-refix-plan.md              산출물: 리뷰 종합 수정계획
 issue-21__TYPE-agent-stats.json           산출물: 리뷰어·구현자 통계 (기계용)
+# --- issue-48 이후 (merge 이후 생성되는 fixing 파생) ---
+issue-49-fixing-48-credential-exposure__BY-qwen.md                       pending 파생 (must-fix, 단일 작성자)
+issue-50-fixing-48-null-pointer__STATE-later__BY-gemini-qwen-sonnet.md   파킹 파생 (good-to-fix, 다중 작성자 알파벳 정렬)
+issue-51-fixing-48-race-condition__STATE-later__BY-qwen-2.md             파킹 파생 (충돌 suffix -2)
+issue-52-fixing-48-mixed-review__BY-qwen.md                              pending 파생 (self+다른 리뷰어 → self 제외, BY 값만)
 ```
 
 핵심 한 문장: **`__` 뒤는 기계가 읽고(판정), `-` 슬러그는 사람이

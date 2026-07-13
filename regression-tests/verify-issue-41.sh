@@ -25,7 +25,7 @@ has "재검증" "must-fix 한정 실질 재검증"
 has "인용이 실재" "재검증: 인용 실재 확인"
 has "주장이 성립" "재검증: 주장 성립 확인"
 # 파생 이슈 생성
-has "-fixing-<N>" "파생 이슈 파일명 -fixing-<N>"
+has "-fixing-<" "파생 이슈 파일명 -fixing-<N> (issue-41 도입) 또는 -fixing-<N>-<slug> (issue-48 확장형), 양쪽 prefix 매치"
 has "__STATE-later" "good-to-fix 파킹 (__STATE-later)"
 has "최대 번호 + 1" "채번: 아카이브 포함 max+1"
 has "계보" "본문 계보 필수"

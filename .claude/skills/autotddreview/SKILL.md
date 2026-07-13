@@ -155,15 +155,32 @@ If not done, the execution session runs inline, in this order:
    사람 눈을 거치므로 재검증을 생략한다. (비용 비대칭: must-fix 1건은
    무인 `/autotdd` 풀사이클을 발동하므로 오판 비용이 재검증 비용보다
    크다.)
-5. **파생 이슈 생성** (`to-tickets` 스킬 활용, 파일명은 규약 v2):
-   - must-fix → `issues/issue-<신번호>-fixing-<N>.md` (pending)
-   - good-to-fix → `issues/issue-<신번호>-fixing-<N>__STATE-later.md`
-     (파킹 — 사람이 STATE 태그를 지워 승격할 때까지 파이프라인 제외)
+5. **파생 이슈 생성** (`to-tickets` 스킬 활용, 파일명은 규약 v2 + issue-48):
+   - **파일명**: 정규화·override·suffix·다중 리뷰어 정렬은 결정성을 위해
+     helper `tools/derive_fixing_slug.py`에 위임한다. SKILL.md prose는
+     호출 시점·인자만 명시. helper API·CLI 상세는 `tools/derive_fixing_slug.py`
+     docstring 참조.
+   - **슬러그 도출**: `python tools/derive_fixing_slug.py slug --max-len 50`
+     (stdin에 finding 본문) → stdout이 `<finding-slug>`. override 우선,
+     자동 추출 fallback.
+   - **BY 정렬**: `python tools/derive_fixing_slug.py by --names "<csv>"`
+     → stdout이 `<r1>-<r2>-...` (알파벳 정렬, `self` 규칙 적용).
+   - **충돌 검사**: `python tools/derive_fixing_slug.py suffix
+     --existing "<기존 슬러그 csv>" --slug "<신규>"` → 충돌 시 `-2`,
+     `-3` suffix 부여.
+   - **파일명 조립** (helper `build_filename` 또는 SKILL.md prose inline):
+     - must-fix → `issue-<신번호>-fixing-<원본>-<finding-slug>__BY-<r1>-<r2>-...md`
+     - good-to-fix → `issue-<신번호>-fixing-<원본>-<finding-slug>__STATE-later__BY-<r1>-<r2>-...md`
+   - **적용 시점**: 본 PR merge 이후 생성되는 모든 fixing 파생부터.
+     merge 이전 archived 파일(`issue-127-fixing-123.md`, `__STATE-later`
+     단일 슬러그)은 **불변** (spec 96줄 "레거시 불변" + "관행·문법 아님"
+     섹션의 "레거시 호환" 항목).
    - **중복 finding 규칙** (issue-44): 복수 리뷰어가 같은 결함을 독립
      발견해 승격된 경우 — 파생 이슈는 **1개만** 생성한다(계보에 복수
      리뷰 파일 인용). stats의 must_fix/good_to_fix 카운트는 **발견한
      리뷰어 전원**에게 각각 +1. 최초 발견자 개념은 두지 않는다(병렬
-     실행이므로 무의미).
+     실행이므로 무의미). BY 값은 발견한 리뷰어 전원의 base명을 helper
+     `by` subcommand로 알파벳 정렬한 결과(예: `__BY-gemini-qwen-sonnet`).
    - 채번: issues/ + issues/archive/ 전체에서 **최대 번호 + 1** (번호
      재사용 금지). 생성 직전 기존 번호를 재확인한다.
    - 본문 **계보** 필수: 원본 이슈 번호, 출처 리뷰 파일명, 해당 finding
