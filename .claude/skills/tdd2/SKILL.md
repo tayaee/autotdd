@@ -170,7 +170,11 @@ failure has an unambiguous line between what's live and what isn't.
    기록한다 (Step 11의 loc_added 산출용). 같은 순간 ISO 8601 타임스탬프도
    얻어 `issues/issue-<#N>__TYPE-agent-stats.json`을 **최초 생성**한다
    (파일이 이미 있으면 — 드문 재실행 케이스 — `issue`/`started`는
-   보존하고 덮어쓰지 않는다):
+   보존하고 덮어쓰지 않는다). **타임스탬프 규약** (이 파일의 모든
+   ISO 8601 필드에 공통 적용 — `started`/`mvp.ts`/이하 review_outcome.ts
+   등): 로컬 타임존 오프셋을 포함하고, UTC `Z`로 강제 변환하지 않는다
+   (`date +%Y-%m-%dT%H:%M:%S%:z` 또는 동등한 방법 — 예:
+   `2026-07-13T14:23:01-04:00`):
    ```json
    {
      "issue": <이슈번호>,
@@ -230,7 +234,8 @@ failure has an unambiguous line between what's live and what isn't.
       never arises there; if it somehow does, stop and report instead
       of prompting-then-waiting.
 11. Update `issues/issue-#.md`'s `## 구현 결과` section: completion
-    timestamp (ISO 8601), changed files, deviation from plan (or
+    timestamp (ISO 8601, local timezone offset — same convention as
+    Step 5, never UTC `Z`), changed files, deviation from plan (or
     "없음"), and the verify result (this script's pass/fail +
     regression suite status).
 

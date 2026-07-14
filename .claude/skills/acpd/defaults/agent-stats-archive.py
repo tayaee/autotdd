@@ -7,7 +7,8 @@
 
 acpd(aacp.sh/.ps1)가 `issue-N__TYPE-*` 산출물을 아카이브 디렉터리로
 git mv하기 직전, agent-stats.json에 한해 이 스크립트를 먼저 호출한다.
-기존 `started` 필드를 기준으로 `archived`(현재 UTC ISO 8601)와
+기존 `started` 필드를 기준으로 `archived`(현재 로컬 타임존 오프셋 포함
+ISO 8601, 예: `2026-07-13T14:23:01-04:00` — UTC `Z` 아님)와
 `duration`(ISO 8601 duration, archived - started)을 계산해 같은 파일에
 덮어쓴다. 표준 라이브러리만 사용.
 
@@ -47,7 +48,8 @@ def parse_iso8601(value: str) -> datetime:
 
 
 def format_iso8601(dt: datetime) -> str:
-    return dt.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    """로컬 타임존 오프셋을 포함한 ISO 8601 문자열로 (예: -04:00). UTC로 강제하지 않는다."""
+    return dt.astimezone().isoformat(timespec="seconds")
 
 
 def format_duration(total_seconds: int) -> str:
@@ -109,7 +111,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"ERROR: {path}의 started 값 파싱 불가 ({exc})", file=sys.stderr)
         return 1
 
-    archived = datetime.now(timezone.utc)
+    archived = datetime.now().astimezone()
     delta_seconds = int(round((archived - started).total_seconds()))
     try:
         duration = format_duration(delta_seconds)

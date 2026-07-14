@@ -209,10 +209,11 @@ If not done, the execution session runs inline, in this order:
    `issues/issue-N__TYPE-agent-stats.json`의 `coders.<base명>.review_outcome`을
    채워 넣는다.
    - 키 `<base명>`은 기존 `coders`의 키(tdd2가 Step 5/11에서 생성한 키)를 그대로 사용하며, 새 coder를 추가하지 않는다.
-   - `review_outcome` 스키마:
+   - `review_outcome` 스키마 (`ts`는 tdd2와 동일한 타임스탬프 규약 —
+     로컬 타임존 오프셋 포함, UTC `Z` 금지):
      ```json
      "review_outcome": {
-       "ts": "<ISO8601>",
+       "ts": "<ISO8601, 로컬 오프셋 포함>",
        "findings_received": <이 리뷰어로부터 받은 총 finding 수>,
        "must_fix_count": <이 리뷰어의 finding 중 실질 재검증을 통과해 파생 이슈로 생성된 must-fix 수>,
        "good_to_fix_count": <이 리뷰어의 finding 중 good-to-fix 분류 수>,
