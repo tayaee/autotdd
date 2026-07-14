@@ -27,11 +27,8 @@ Two issue streams are handled:
 - **`__TYPE-*` 산출물 동반 아카이브** (issue-47): 이 이슈의 살아있는
   `issue-N__TYPE-*` 파일(code-review들, refix-plan, agent-stats.json)도
   같은 커밋에서 함께 아카이브한다 — 별도 호출 불요. `agent-stats.json`은
-  이동 직전, 대상 repo에 `tools/log-cost-summary.py`가 있으면(이 저장소
-  전용 도구 — `deploy.sh`와 같은 "있으면 실행, 없으면 스킵" 방식)
-  `cost_details`를 스캔해 `cost_summary`를 채우고, 그다음
-  `defaults/agent-stats-archive.py`가 `archived`/`duration` 필드를
-  채운다.
+  이동 직전 `defaults/agent-stats-archive.py`가 `archived`/`duration`
+  필드를 채운다.
 - **Commit prefix**: `<stream>-<N>: <summary>` (e.g., `issue-22: ...`,
   `autofix-3: ...`).
 - **파일명 규약**: 단일 정본은 `docs/spec/spec-issue-filenames.md`.
