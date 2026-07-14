@@ -1,5 +1,5 @@
 {
-  "name": "autotdd",
+  "name": "tayaee-autotdd",
   "version": "1.0.0",
   "description": "Auto TDD plugin for Antigravity CLI",
   "entry": "skills/"

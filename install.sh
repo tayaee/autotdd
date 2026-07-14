@@ -13,7 +13,7 @@ set -euo pipefail
 
 # 이 스크립트가 있는 곳의 절대경로 = repo 루트.
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-SRC_DIR="$REPO_ROOT/.claude/skills"
+SRC_DIR="$REPO_ROOT/skills"
 
 # HOME이 지정돼 있으면 그쪽, 아니면 현재 사용자 HOME.
 HOME_DIR="${HOME:-$(getent passwd "$(id -u)" | cut -d: -f6 2>/dev/null || echo ~)}"
