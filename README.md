@@ -1,4 +1,4 @@
-# autotdd
+# autosdlc
 
 Three Claude Code skills implementing an issue-driven, local-file TDD
 workflow (no GitHub/GitLab — issues are `issues/issue-#.md`). The name
@@ -56,7 +56,7 @@ on it.
 
 ```bash
 npx skills add mattpocock/skills -g
-npx skills add tayaee/autotdd -g
+npx skills add tayaee/autosdlc -g
 ```
 
 ## Quickstart

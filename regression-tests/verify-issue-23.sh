@@ -1,6 +1,6 @@
 #!/bin/bash
 # verify-issue-23.sh — docs/SETUP-autoqafix.md has 7 required sections
-# and every <autotdd>/... path it references actually exists on disk.
+# and every <autosdlc>/... path it references actually exists on disk.
 
 set -u
 
@@ -41,25 +41,25 @@ assert_grep "^## 7\. 알려진 정리 작업"  "section 7 — 알려진 정리 �
 # "시작 위치" mention (acceptance #3)
 assert_grep "시작 위치" "시작 위치 setting mentioned"
 
-# Path existence: extract every `<autotdd>/<path>` literal from the doc
+# Path existence: extract every `<autosdlc>/<path>` literal from the doc
 # and check that <REPO_ROOT>/<path> exists on disk.
 echo ""
-echo "=== <autotdd>/... path existence ==="
+echo "=== <autosdlc>/... path existence ==="
 
-paths=$(grep -oE '<autotdd>/[^[:space:])`]+' "$DOC" | sed 's/<autotdd>//' | sort -u)
+paths=$(grep -oE '<autosdlc>/[^[:space:])`]+' "$DOC" | sed 's/<autosdlc>//' | sort -u)
 if [ -z "$paths" ]; then
-    echo "[INFO] no <autotdd>/... paths found in doc"
+    echo "[INFO] no <autosdlc>/... paths found in doc"
 fi
 while IFS= read -r p; do
     [ -z "$p" ] && continue
     real="$REPO_ROOT$p"
     if [ -e "$real" ]; then
-        echo "[PASS] path exists: <autotdd>$p"
+        echo "[PASS] path exists: <autosdlc>$p"
         pass=$((pass+1))
     else
-        echo "[FAIL] path missing: <autotdd>$p (expected at $real)"
+        echo "[FAIL] path missing: <autosdlc>$p (expected at $real)"
         fail=$((fail+1))
-        failures+=("path <autotdd>$p")
+        failures+=("path <autosdlc>$p")
     fi
 done <<< "$paths"
 

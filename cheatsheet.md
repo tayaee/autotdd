@@ -1,4 +1,4 @@
-# autotdd 치트시트
+# autosdlc 치트시트
 
 issue 파일 기반 TDD 스킬(`tdd2`/`acpd`/`autotdd`) + 무인 자동 개발/수정 스위트
 (`autoqa`/`autofix`/`autodev`/`autoqafix`). GitHub 이슈 없음 — 모든 작업 항목은
@@ -111,10 +111,10 @@ B(자동 수정 엔진)는 완전히 별세계가 아니다 — `autofix.py`가 
 ## 시나리오 3 — 새 머신/새 repo에 무인 스위트 배치
 
 ```bash
-git clone <autotdd> ~/git/autotdd && ~/git/autotdd/install.sh   # 스킬 4종 symlink
+git clone <autosdlc> ~/git/autosdlc && ~/git/autosdlc/install.sh   # 스킬 4종 symlink
 cd <대상 앱 repo>
-~/git/autotdd/autoqafix-doctor.sh          # 사전 점검 (FAIL 0이면 준비 완료)
-~/git/autotdd/.claude/skills/autoqafix/wrappers/ping-claudecli.sh  # 실 LLM 응답 확인 (크레딧 소모)
+~/git/autosdlc/autoqafix-doctor.sh          # 사전 점검 (FAIL 0이면 준비 완료)
+~/git/autosdlc/.claude/skills/autoqafix/wrappers/ping-claudecli.sh  # 실 LLM 응답 확인 (크레딧 소모)
 ```
 
 대상 repo에 필요한 것: `issues/`, `logs/`(qa 롤일 때), git identity·origin,
@@ -123,7 +123,7 @@ cd <대상 앱 repo>
 ## 시나리오 4 — 로그에서 결함 자동 보고 (qa 롤)
 
 ```bash
-cd <대상 앱 repo> && ~/git/autotdd/autoqa.sh
+cd <대상 앱 repo> && ~/git/autosdlc/autoqa.sh
 ```
 
 `logs/*.log` 증분 스캔(오프셋 저장) → 미보고 에러 최빈 5개 → 유료 LLM이 본문 작성
@@ -132,8 +132,8 @@ cd <대상 앱 repo> && ~/git/autotdd/autoqa.sh
 ## 시나리오 5 — 등록/보고된 항목 무인 구현 (fix/dev 롤)
 
 ```bash
-~/git/autotdd/autofix.sh    # autofix-#.md 담당
-~/git/autotdd/autodev.sh    # issue-#.md 담당 (같은 엔진, 스트림만 다름)
+~/git/autosdlc/autofix.sh    # autofix-#.md 담당
+~/git/autosdlc/autodev.sh    # issue-#.md 담당 (같은 엔진, 스트림만 다름)
 ```
 
 항목마다 LLM 재선정 → agent-tier 매칭 → worktree에서 `/autotdd <id> worktree` 실행.
@@ -146,8 +146,8 @@ cd <대상 앱 repo> && ~/git/autotdd/autoqa.sh
 사이클로 묶어 재시동까지 하는 합성 루프는 지금은 못 쓴다 — 만들어지기 전까지는
 아래처럼 단일 롤 루프를 개별로 `shell:startup`에 등록해서 대체한다:
 
-- 대상 1: `<autotdd>\autoqa-loop.bat`
-- 대상 2: `<autotdd>\autofix-loop.bat` (또는 `autodev-loop.bat`)
+- 대상 1: `<autosdlc>\autoqa-loop.bat`
+- 대상 2: `<autosdlc>\autofix-loop.bat` (또는 `autodev-loop.bat`)
 - **"시작 위치" = 대상 앱 repo 루트** (cwd 규약의 전부)
 
 각 `*-loop.bat`은 `role-loop.py --role {qa,fix,dev}`를 무한 반복(페이즈별 최소

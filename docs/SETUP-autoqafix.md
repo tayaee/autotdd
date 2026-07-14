@@ -1,7 +1,7 @@
 # SETUP-autoqafix.md
 
 사람이 새 머신 / 새 repo에 autoqafix 스위트를 배치할 때 따라 하는 단일 문서.
-각 항목 끝에 있는 `[<autotdd>]` 같은 경로는 `~/git/autotdd` (또는 autotdd
+각 항목 끝에 있는 `[<autosdlc>]` 같은 경로는 `~/git/autosdlc` (또는 autosdlc
 클론 위치)로 해석.
 
 ## 1. 사전 준비
@@ -9,12 +9,12 @@
 - **Python 패키지 매니저**: `uv` 설치
   - Linux/WSL: `curl -LsSf https://astral.sh/uv/install.sh | sh`
   - Windows PowerShell: `irm https://astral.sh/uv/install.ps1 | iex`
-- **래퍼 디렉토리**: `<autotdd>/.claude/skills/autoqafix/wrappers/` 의
+- **래퍼 디렉토리**: `<autosdlc>/skills/autoqafix/wrappers/` 의
   `claudecli.sh`, `antigravitycli.sh`, `qwencli.sh`, `minimaxcli.sh` 등
-  사용 래퍼가 PATH에 있어야 함. (또는 `<autotdd>/install.sh` 로 일괄 설치.)
+  사용 래퍼가 PATH에 있어야 함. (또는 `<autosdlc>/install.sh` 로 일괄 설치.)
 - **git identity**: `git config --global user.name/email` 설정
-- **autotdd 클론 위치**: `~/git/autotdd` 권장. 다른 위치여도 되고 그때마다
-  `<autotdd>` 표기를 실제 경로로 치환하면 됨.
+- **autosdlc 클론 위치**: `~/git/autosdlc` 권장. 다른 위치여도 되고 그때마다
+  `<autosdlc>` 표기를 실제 경로로 치환하면 됨.
 
 ## 2. 점검 순서
 
@@ -24,11 +24,11 @@
 cd <target-repo>   # 항상 여기서 시작
 
 # (1) 환경 + 처리 결과 종합 진단
-bash <autotdd>/autoqafix-doctor.sh
+bash <autosdlc>/autoqafix-doctor.sh
 
 # (2) 사용 중인 LLM ping (크레딧 소모 — 한 사이클 1회)
-bash <autotdd>/.claude/skills/autoqafix/wrappers/ping-claudecli.sh
-bash <autotdd>/.claude/skills/autoqafix/wrappers/ping-qwencli.sh
+bash <autosdlc>/skills/autoqafix/wrappers/ping-claudecli.sh
+bash <autosdlc>/skills/autoqafix/wrappers/ping-qwencli.sh
 # 기타 사용 래퍼도 같은 패턴
 
 # (3) 픽스처 기반 회귀 (대상 repo의 verify-issue-*.sh 전체)
@@ -40,9 +40,9 @@ for f in regression-tests/verify-*.sh; do bash "$f" || echo "FAIL $f"; done
 Windows 머신에서 무인으로 돌릴 때:
 
 - `Win+R` → `shell:startup` 폴더에 지름길(shortcut) 생성
-- **대상**: `<autotdd>\autodev-loop.bat --reboot-on-fix`
-  (역할별로 다름 — autofix 스트림은 `<autotdd>\autofix-loop.bat`,
-   QA는 `<autotdd>\autoqa-loop.bat`)
+- **대상**: `<autosdlc>\autodev-loop.bat --reboot-on-fix`
+  (역할별로 다름 — autofix 스트림은 `<autosdlc>\autofix-loop.bat`,
+   QA는 `<autosdlc>\autoqa-loop.bat`)
 - **"시작 위치" = 대상 앱 repo 루트** ← 이게 cwd 규약의 전부. 다른 위치면
   의도한 repo가 아니라 다른 repo를 잘못 처리한다. Windows 지름길의
   "Start in" 필드가 바로 이 값.
@@ -55,13 +55,13 @@ Windows 머신에서 무인으로 돌릴 때:
 대상 앱 repo에서 1회형으로 직접:
 
 ```bash
-<autotdd>/autoqa.sh    # QA 1회 — 로그 → autofix 스트림 보고
-<autotdd>/autofix.sh   # autofix 스트림 한 항목 구현
-<autotdd>/autodev.sh   # issue 스트림 한 항목 구현
+<autosdlc>/autoqa.sh    # QA 1회 — 로그 → autofix 스트림 보고
+<autosdlc>/autofix.sh   # autofix 스트림 한 항목 구현
+<autosdlc>/autodev.sh   # issue 스트림 한 항목 구현
 ```
 
 무인 주기 루프는 같은 이름에 `-loop` 접미사 붙은
-`<autotdd>/autodev-loop.sh`, `<autotdd>/autofix-loop.sh` 등을 사용.
+`<autosdlc>/autodev-loop.sh`, `<autosdlc>/autofix-loop.sh` 등을 사용.
 
 ## 5. Claude Code 스킬
 
@@ -83,8 +83,8 @@ Windows 머신에서 무인으로 돌릴 때:
   - `__STATE-manual` → 사람 직접 처리
   - `__STATE-agent-failed` → 사람이 실패 기록 읽고 보강 후 태그 제거 후 재시도
   - `__STATE-later` → 사람이 미룸 (태그 제거로 다시 대기열로)
-- **용어 + 설계 본문**: [`<autotdd>/CONTEXT.md`](../CONTEXT.md),
-  [`<autotdd>/docs/autoqafix-design.md`](./autoqafix-design.md)
+- **용어 + 설계 본문**: [`<autosdlc>/CONTEXT.md`](../CONTEXT.md),
+  [`<autosdlc>/docs/autoqafix-design.md`](./autoqafix-design.md)
 
 ## 7. 알려진 정리 작업
 

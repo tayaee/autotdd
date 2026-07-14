@@ -1,4 +1,4 @@
-# autotdd
+# autosdlc
 
 issue 파일 기반 TDD 스킬(tdd2/acpd/autotdd)과 무인 자동 개발/수정 스위트
 (autoqa/autofix/autodev/autoqafix)의 리포.
