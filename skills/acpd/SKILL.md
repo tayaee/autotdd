@@ -179,6 +179,12 @@ under `issues/archive/`, a different path) for that signal.
 - **Commit message trailer is baked into the script.** Don't pass a
   message that already includes `Co-Authored-By` — you'll get it
   twice.
+- **The `<stream>-<N>:` prefix is also baked in.** The script builds
+  the commit message itself as `<stream>-<N>: <summary>` (see step 4
+  above). `<commit-summary...>` must be **just the summary text** —
+  don't pass something that already starts with `issue-<N>:` or you'll
+  get it twice (`issue-380: issue-380: ...`). Compose the summary as
+  plain description text only.
 - **`git add -u` is deliberate, not `git add -A`.** Untracked files
   (scratch files, new files the issue didn't ask for) are never staged
   by this skill.
