@@ -24,16 +24,19 @@ Two issue streams are handled:
 - **Archive target**: `issues/archive/<YYYY>/<MM>/<DD>/` for either
   stream — 파일명은 **그대로**(라이브·아카이브 단일 규약, 변환 없음)
   `git mv`로 옮긴다 (`git log --follow` 이력 추적 보존).
-- **`__TYPE-*` 산출물 동반 아카이브** (issue-47): 이 이슈의 살아있는
-  `issue-N__TYPE-*` 파일(code-review들, refix-plan, agent-stats.json)도
-  같은 커밋에서 함께 아카이브한다 — 별도 호출 불요. `agent-stats.json`은
-  이동 직전 `defaults/agent-stats-archive.py`가 `archived`/`duration`
-  필드를 채운다.
+- **산출물 동반 아카이브** (issue-47, v3 마커 개명): 이 이슈의 살아있는
+  출력 파일(`issue-N__code-review-by-*.md`, `issue-N__refix-plan.md`,
+  `issue-N__agent-stats.json`)도 같은 커밋에서 함께 아카이브한다 —
+  별도 호출 불요. `agent-stats.json`은 이동 직전
+  `defaults/agent-stats-archive.py`가 `archived`/`duration` 필드를
+  채운다.
 - **Commit prefix**: `<stream>-<N>: <summary>` (e.g., `issue-22: ...`,
   `autofix-3: ...`).
-- **파일명 규약**: 단일 정본은 `docs/spec/spec-issue-filenames.md`.
-  pending 판정은 `__TYPE-`/`__STATE-` 태그 부재 — `__STATE-later` 등
-  파킹 파일과 `__TYPE-*` 산출물은 pending 목록에서 제외된다.
+- **파일명 규약(v3)**: 단일 정본은 `docs/spec/spec-issue-filenames.md`.
+  pending 판정은 마커 부재, 또는 `__must-fix-by-`/`__analysis-required`만
+  존재 — `__tech-debt-by-`/`__STATE-manual`/`__STATE-agent-failed` 등
+  파킹 파일과 `__code-review-by-`/`__refix-plan`/`__agent-stats` 산출물은
+  pending 목록에서 제외된다.
 
 ## A naming note before anything else
 

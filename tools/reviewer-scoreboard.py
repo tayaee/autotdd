@@ -3,12 +3,16 @@
 # requires-python = ">=3.12"
 # dependencies = []
 # ///
-"""reviewer-scoreboard — 리뷰어/구현자 스코어보드 CLI (issue-43, issue-47).
+"""reviewer-scoreboard — 리뷰어/구현자 스코어보드 CLI (issue-43, issue-47, v3 마커 개명).
 
 autotddreview의 플래너(issue-41)와 tdd2(issue-45/46)가 한 이슈당 하나씩
-남기는 `issues/issue-N__TYPE-agent-stats.json`(issue-47에서
-review-stats.json + coding-stats.json을 통합)을 라이브·아카이브에서
-모두 모아 모델별로 집계한다. 표준 라이브러리만 사용.
+남기는 `issues/issue-N__agent-stats.json`(issue-47에서 review-stats.json
++ coding-stats.json을 통합; v3에서 `__TYPE-agent-stats.json`→
+`__agent-stats.json`으로 개명)을 라이브·아카이브에서 모두 모아 모델별로
+집계한다. `good_to_fix`(구 용어)는 `tech_debt`로 개명됐다 — 개정 이전
+아카이브 파일은 필드명을 바꾸지 않으므로(레거시 불변), 집계 시
+`tech_debt`가 없으면 `good_to_fix`로 폴백해 읽는다(과거 데이터 유실
+방지). 표준 라이브러리만 사용.
 
 사용법:
     reviewer-scoreboard.py [repo-path] [--json] [--since YYYY-MM-DD]
@@ -21,8 +25,12 @@ import sys
 from datetime import date, datetime
 from pathlib import Path
 
-COUNT_KEYS = ("findings", "must_fix", "good_to_fix", "gate_rejected", "verify_rejected")
-STATS_GLOB = "*__TYPE-agent-stats.json"
+COUNT_KEYS = ("findings", "must_fix", "tech_debt", "gate_rejected", "verify_rejected")
+# 레거시 별칭: 개정 이전 아카이브 파일의 필드명(폴백 전용, 신규 파일은 쓰지 않음).
+LEGACY_COUNT_KEY_ALIASES = {"tech_debt": "good_to_fix"}
+# v3에서 `__TYPE-agent-stats.json`→`__agent-stats.json`으로 개명. 개정
+# 이전 아카이브 파일은 옛 이름 그대로(레거시 불변)이므로 둘 다 수집한다.
+STATS_GLOBS = ("*__agent-stats.json", "*__TYPE-agent-stats.json")
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -55,7 +63,8 @@ def collect(repo: Path, since: date | None) -> tuple[dict[str, dict[str, int]], 
     issues_dir = repo / "issues"
     stats: dict[str, dict[str, int]] = {}
     cycles = 0
-    for f in sorted(issues_dir.rglob(STATS_GLOB)):
+    found = {p for g in STATS_GLOBS for p in issues_dir.rglob(g)}
+    for f in sorted(found):
         try:
             data = json.loads(f.read_text(encoding="utf-8"))
             if not isinstance(data, dict):
@@ -82,8 +91,11 @@ def collect(repo: Path, since: date | None) -> tuple[dict[str, dict[str, int]], 
             agg["cycles"] += 1
             if isinstance(r, dict):
                 for k in COUNT_KEYS:
+                    raw = r.get(k)
+                    if raw is None and k in LEGACY_COUNT_KEY_ALIASES:
+                        raw = r.get(LEGACY_COUNT_KEY_ALIASES[k])
                     try:
-                        agg[k] += int(r.get(k, 0))
+                        agg[k] += int(raw) if raw is not None else 0
                     except (TypeError, ValueError):
                         print(f"경고: {f} {name}.{k} 값 비정상 — 0으로 처리", file=sys.stderr)
     return stats, cycles
@@ -98,7 +110,8 @@ def collect_coders(repo: Path, since: date | None) -> dict[str, dict]:
     """
     issues_dir = repo / "issues"
     stats: dict[str, dict] = {}
-    for f in sorted(issues_dir.rglob(STATS_GLOB)):
+    found = {p for g in STATS_GLOBS for p in issues_dir.rglob(g)}
+    for f in sorted(found):
         stem = f.stem
         prefix = "issue-"
         idx = stem.find(prefix)
@@ -168,10 +181,14 @@ def collect_coders(repo: Path, since: date | None) -> dict[str, dict]:
                             except (TypeError, ValueError):
                                 print(f"경고: {f} coder {coder_id} mvp.static_analysis_failures.{tool} 값 비정상 — 건너뜀", file=sys.stderr)
             if isinstance(review_outcome, dict):
-                for key, target_key in [("must_fix_count", "must_fix_count"),
-                                       ("good_to_fix_count", "good_to_fix_count"),
-                                       ("refix_plans_written", "refix_plans_written")]:
-                    val = review_outcome.get(key, 0)
+                for key, legacy_key, target_key in [
+                    ("must_fix_count", None, "must_fix_count"),
+                    ("tech_debt_count", "good_to_fix_count", "tech_debt_count"),
+                    ("refix_plans_written", None, "refix_plans_written"),
+                ]:
+                    val = review_outcome.get(key)
+                    if val is None and legacy_key is not None:
+                        val = review_outcome.get(legacy_key)
                     try:
                         agg[target_key] += int(val) if val is not None else 0
                     except (TypeError, ValueError):
@@ -185,7 +202,7 @@ def _empty_coder_dict() -> dict:
         "loc_added": 0,
         "static_analysis_failures": {"ruff": None, "pyright": None},
         "must_fix_count": 0,
-        "good_to_fix_count": 0,
+        "tech_debt_count": 0,
         "refix_plans_written": 0,
         "model": "",
     }
@@ -194,7 +211,7 @@ def _empty_coder_dict() -> dict:
 def promotion_rate(agg: dict[str, int]) -> float:
     if agg["findings"] <= 0:
         return 0.0
-    return (agg["must_fix"] + agg["good_to_fix"]) / agg["findings"]
+    return (agg["must_fix"] + agg["tech_debt"]) / agg["findings"]
 
 
 def render_table(
@@ -203,13 +220,13 @@ def render_table(
     coders: dict[str, dict] | None = None,
 ) -> str:
     rows = sorted(stats.items(), key=lambda kv: promotion_rate(kv[1]), reverse=True)
-    header = (f"{'리뷰어':<12} {'사이클':>6} {'finding':>8} {'must':>5} {'good':>5} "
+    header = (f"{'리뷰어':<12} {'사이클':>6} {'finding':>8} {'must':>5} {'debt':>5} "
               f"{'gate-rej':>8} {'verify-rej':>10} {'승격률':>7}")
     lines: list[str] = [f"집계 사이클: {cycles}", header, "-" * len(header)]
     for name, agg in rows:
         lines.append(
             f"{name:<12} {agg['cycles']:>6} {agg['findings']:>8} {agg['must_fix']:>5} "
-            f"{agg['good_to_fix']:>5} {agg['gate_rejected']:>8} {agg['verify_rejected']:>10} "
+            f"{agg['tech_debt']:>5} {agg['gate_rejected']:>8} {agg['verify_rejected']:>10} "
             f"{promotion_rate(agg) * 100:>6.1f}%"
         )
     lines.append("")
@@ -230,7 +247,7 @@ def render_table(
         )
         coder_header = (
             f"{'coder':<12} {'이슈':>5} {'loc_added':>10} "
-            f"{'ruff':>6} {'pyright':>8} {'must':>5} {'good':>5} {'refix':>6} "
+            f"{'ruff':>6} {'pyright':>8} {'must':>5} {'debt':>5} {'refix':>6} "
             f"{'density':>8} {'static':>7} {'review':>7}"
         )
         lines.append(coder_header)
@@ -241,7 +258,7 @@ def render_table(
             pyright = agg["static_analysis_failures"]["pyright"]
             static_fail_sum = (ruff or 0) + (pyright or 0)
             must_fix = agg["must_fix_count"]
-            good = agg["good_to_fix_count"]
+            debt = agg["tech_debt_count"]
             refix = agg["refix_plans_written"]
             density = (static_fail_sum + must_fix) / loc * 1000 if loc > 0 else 0.0
             static_density = static_fail_sum / loc * 1000 if loc > 0 else 0.0
@@ -250,7 +267,7 @@ def render_table(
             pyright_str = str(pyright) if pyright is not None else "-"
             lines.append(
                 f"{name:<12} {len(agg['issues']):>5} {loc:>10} "
-                f"{ruff_str:>6} {pyright_str:>8} {must_fix:>5} {good:>5} {refix:>6} "
+                f"{ruff_str:>6} {pyright_str:>8} {must_fix:>5} {debt:>5} {refix:>6} "
                 f"{density:>8.1f} {static_density:>7.1f} {review_density:>7.1f}"
             )
         lines.append("")
@@ -282,7 +299,7 @@ def render_json(
             "loc_added": loc,
             "static_analysis_failures": agg["static_analysis_failures"],
             "must_fix_count": must_fix,
-            "good_to_fix_count": agg["good_to_fix_count"],
+            "tech_debt_count": agg["tech_debt_count"],
             "refix_plans_written": agg["refix_plans_written"],
             "model": agg["model"],
             "defect_density_per_kloc": round(density, 1),

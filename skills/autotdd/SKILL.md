@@ -19,12 +19,18 @@ for each issue number.
 
 - **Stream IDs**: `issue-<N>` and `autofix-<N>`. Bare-number arguments
   (e.g., `autotdd 22`) default to the `issue` stream.
-- **문법**: `<stream>-<N>[-<slug>][__<KEY>-<value>]*.md` — KEY는 대문자
-  `TYPE`/`STATE`/`BY`만.
-- **판정 규칙**: `__TYPE-`도 `__STATE-`도 없으면 pending("remaining
-  issues" 대상). 하나라도 있으면 제외 — `__STATE-later`/
-  `__STATE-manual`/`__STATE-agent-failed`는 파킹, `__TYPE-*`는 산출물.
-  번호는 정규식 `^(issue|autofix)-([0-9]+)`로 추출한다.
+- **문법(v3)**: `<stream>-<N>[-<slug>][__<마커>].md` — 마커는 닫힌
+  리터럴 집합(`code-review-by-<llms>` / `refix-plan` / `agent-stats` /
+  `must-fix-by-<llms>` / `tech-debt-by-<llms>` / `analysis-required` /
+  `STATE-manual` / `STATE-agent-failed`).
+- **판정 규칙**: 마커가 없거나 `must-fix-by-`/`analysis-required`만
+  있으면 pending("remaining issues" 대상). 그 외 마커가 하나라도 있으면
+  제외 — `code-review-by-`/`refix-plan`/`agent-stats`는 산출물,
+  `tech-debt-by-`/`STATE-manual`/`STATE-agent-failed`는 파킹. 번호는
+  정규식 `^(issue|autofix)-([0-9]+)`로 추출한다.
+- **analysis-required 게이트**: pending이지만 원인 분석·계획이 없는
+  raw 보고(`create-tickets.py` 자동 생성) — 아래 "analysis-required
+  게이트" 절 참조.
 - **예약 슬러그 가드**: 태그 없는 파일이 구(v1) 규약 구조에 해당하면
   (패턴 표는 spec 문서) 목록에 넣지 말고 "harness-project의
   `upgrade-issue-filenames.sh`를 실행하라"는 안내와 함께 중단한다.
@@ -122,6 +128,33 @@ If **any UI-touching issue** is found:
    failed for any reason → **stop and report**. Do not proceed with
    UI-touching issues without browser verification capability.
 
+## analysis-required 게이트 — run after the UI dependency check, before the loop
+
+`create-tickets.py`가 로그 스캔으로 자동 등록한 이슈
+(`issue-<N>-<slug>__analysis-required.md`)는 원인 분석도 수정 계획도
+없는 raw 에러 보고다. `issues/`(아카이브 제외) 전체에서 이 파일이
+하나라도 있으면, 스코프(명시 번호든 no-number든)와 무관하게 루프
+진입 전에 **한 번만** 확인한다:
+
+```bash
+ls issues/*__analysis-required*.md 2>/dev/null
+```
+
+- **없음** → 건너뛰고 다음 단계로.
+- **하나 이상 있음** → 사용자에게 물어본다: "분석되지 않은 raw 이슈
+  N개가 있습니다(`__analysis-required`). 자동 진행 전에
+  `grill-with-docs`를 먼저 돌려서 원인 분석·수정 계획을 채울까요?"
+  - **예** → `grill-with-docs` 스킬을 해당 파일들에 대해 실행해 분석·
+    계획을 채운 뒤(사람이 결과를 반영해 `__analysis-required` 마커를
+    제거하는 것은 별도 단계 — 이 스킬이 자동으로 리네이밍하지 않는다),
+    다음 단계로 진행.
+  - **아니오** → `__analysis-required` 파일들은 이번 실행 스코프에서
+    제외하고 나머지 정상 pending 이슈만 진행. 침묵 제외 금지 — 몇 건을
+    건너뛰는지 보고한다.
+
+이것도 dependency check처럼 "질문"이지만 **루프 시작 전**에만 발생 —
+"The one rule that matters"가 금지하는 mid-run 프롬프트가 아니다.
+
 ## Two ways to invoke it
 
 ### `/autotdd <numbers>` — scope given, runs immediately
@@ -133,11 +166,13 @@ below.
 
 1. List every issue still in `issues/` (not yet archived) — everything,
    regardless of state: not started, in-progress, or already
-   pending-deploy. 태그 파일은 목록에서 제외한다 (판정 규칙은 Stream
-   conventions / spec 문서 참조).
+   pending-deploy. 산출물·파킹 마커가 붙은 파일은 제외하되,
+   `__must-fix-by-`/`__analysis-required`는 pending이므로 **포함**한다
+   (판정 규칙은 Stream conventions / spec 문서 참조).
 
    ```bash
-   ls issues/issue-*.md 2>/dev/null | grep -v '__'
+   ls issues/issue-*.md 2>/dev/null | \
+     grep -Ev '__(code-review-by-|refix-plan|agent-stats|tech-debt-by-|STATE-manual|STATE-agent-failed)'
    ```
 
 2. Show the list, ask **once**: "run through all N of these in order?"

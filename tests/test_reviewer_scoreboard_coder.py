@@ -1,4 +1,9 @@
 """tools/reviewer-scoreboard.py coder 섹션 단위 테스트 (issue-46, issue-47에서 agent-stats.json으로 이관).
+
+이 파일의 픽스처는 의도적으로 레거시 파일명(`__TYPE-agent-stats.json`)과
+레거시 필드명(`good_to_fix_count`)을 그대로 쓴다 — v3 개정 이전 아카이브
+데이터가 새 CLI로도 계속 집계되는지(레거시 불변 + 하위 호환 폴백)를
+검증하는 목적을 겸한다. 출력 쪽 필드명은 새 이름 `tech_debt_count`.
 """
 from __future__ import annotations
 
@@ -91,7 +96,7 @@ def test_coder_section_aggregates_per_model(tmp_path: Path) -> None:
     assert sonnet["loc_added"] == 300
     assert sonnet["static_analysis_failures"] == {"ruff": 2, "pyright": 1}
     assert sonnet["must_fix_count"] == 1
-    assert sonnet["good_to_fix_count"] == 4
+    assert sonnet["tech_debt_count"] == 4
     assert sonnet["refix_plans_written"] == 1
 
     # Total defect density = (static_failures [3] + must_fix [1]) / 300 * 1000 = 13.333... -> 13.3

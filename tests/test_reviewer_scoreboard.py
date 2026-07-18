@@ -1,4 +1,5 @@
-"""tools/reviewer-scoreboard.py 단위 테스트 (issue-43, issue-47에서 agent-stats.json으로 이관).
+"""tools/reviewer-scoreboard.py 단위 테스트 (issue-43, issue-47에서 agent-stats.json으로 이관,
+v3 규약 개정 — good_to_fix → tech_debt, __TYPE-agent-stats.json → __agent-stats.json).
 
 공개 경계(CLI 프로세스)에서 검증한다 — 내부 함수가 아니라 실제 실행
 결과(stdout/stderr/exit code)를 단언한다.
@@ -20,13 +21,14 @@ def run_cli(*args: str) -> subprocess.CompletedProcess[str]:
     )
 
 
-def write_stats(issues_dir: Path, n: int, started: str, reviewers: dict) -> None:
+def write_stats(issues_dir: Path, n: int, started: str, reviewers: dict, *, legacy_filename: bool = False) -> None:
     issues_dir.mkdir(parents=True, exist_ok=True)
     # 실제 파이프라인에서는 tdd2가 coders 골격을 먼저 만들어 두므로
     # reviewers만 있는 픽스처도 coders: {}를 함께 둔다(현실적 형태 유지).
     payload = {"issue": n, "started": started, "reviewers": reviewers,
                "derived_by_reviewers": [], "coders": {}}
-    (issues_dir / f"issue-{n}__TYPE-agent-stats.json").write_text(
+    marker = "__TYPE-agent-stats.json" if legacy_filename else "__agent-stats.json"
+    (issues_dir / f"issue-{n}{marker}").write_text(
         json.dumps(payload), encoding="utf-8"
     )
 
@@ -41,14 +43,14 @@ def test_aggregates_two_cycles_across_live_and_archive(tmp_path: Path) -> None:
     repo = make_repo(tmp_path)
     write_stats(repo / "issues", 21, "2026-07-01T10:00:00", {
         "qwen": {"findings": 10, "gate_rejected": 4, "verify_rejected": 1,
-                 "must_fix": 2, "good_to_fix": 3},
+                 "must_fix": 2, "tech_debt": 3},
     })
     write_stats(repo / "issues" / "archive" / "2026" / "07" / "02", 22,
                 "2026-07-02T10:00:00", {
         "qwen": {"findings": 6, "gate_rejected": 1, "verify_rejected": 0,
-                 "must_fix": 2, "good_to_fix": 1},
+                 "must_fix": 2, "tech_debt": 1},
         "minimax": {"findings": 4, "gate_rejected": 0, "verify_rejected": 0,
-                    "must_fix": 3, "good_to_fix": 1},
+                    "must_fix": 3, "tech_debt": 1},
     })
     proc = run_cli(str(repo))
     assert proc.returncode == 0
@@ -64,7 +66,7 @@ def test_json_output_is_machine_readable(tmp_path: Path) -> None:
     repo = make_repo(tmp_path)
     write_stats(repo / "issues", 21, "2026-07-01T10:00:00", {
         "qwen": {"findings": 10, "gate_rejected": 4, "verify_rejected": 1,
-                 "must_fix": 2, "good_to_fix": 3},
+                 "must_fix": 2, "tech_debt": 3},
     })
     proc = run_cli(str(repo), "--json")
     assert proc.returncode == 0
@@ -79,11 +81,11 @@ def test_since_filters_older_cycles(tmp_path: Path) -> None:
     repo = make_repo(tmp_path)
     write_stats(repo / "issues", 21, "2026-06-01T10:00:00", {
         "qwen": {"findings": 5, "gate_rejected": 0, "verify_rejected": 0,
-                 "must_fix": 5, "good_to_fix": 0},
+                 "must_fix": 5, "tech_debt": 0},
     })
     write_stats(repo / "issues", 22, "2026-07-05T10:00:00", {
         "qwen": {"findings": 2, "gate_rejected": 0, "verify_rejected": 0,
-                 "must_fix": 1, "good_to_fix": 0},
+                 "must_fix": 1, "tech_debt": 0},
     })
     proc = run_cli(str(repo), "--since", "2026-07-01", "--json")
     assert proc.returncode == 0
@@ -96,9 +98,9 @@ def test_corrupt_json_warns_and_continues(tmp_path: Path) -> None:
     repo = make_repo(tmp_path)
     write_stats(repo / "issues", 21, "2026-07-01T10:00:00", {
         "qwen": {"findings": 3, "gate_rejected": 0, "verify_rejected": 0,
-                 "must_fix": 1, "good_to_fix": 1},
+                 "must_fix": 1, "tech_debt": 1},
     })
-    (repo / "issues" / "issue-9__TYPE-agent-stats.json").write_text(
+    (repo / "issues" / "issue-9__agent-stats.json").write_text(
         "{not valid json", encoding="utf-8"
     )
     proc = run_cli(str(repo))
@@ -116,14 +118,14 @@ def test_coder_only_file_without_reviewers_is_not_corruption(tmp_path: Path) -> 
     """
     repo = make_repo(tmp_path)
     (repo / "issues").mkdir(parents=True, exist_ok=True)
-    (repo / "issues" / "issue-30__TYPE-agent-stats.json").write_text(
+    (repo / "issues" / "issue-30__agent-stats.json").write_text(
         json.dumps({"issue": 30, "started": "2026-07-01T10:00:00Z",
                     "coders": {"sonnet5": {"model": "Claude Sonnet 5"}}}),
         encoding="utf-8",
     )
     write_stats(repo / "issues", 21, "2026-07-01T10:00:00", {
         "qwen": {"findings": 3, "gate_rejected": 0, "verify_rejected": 0,
-                 "must_fix": 1, "good_to_fix": 1},
+                 "must_fix": 1, "tech_debt": 1},
     })
     proc = run_cli(str(repo))
     assert proc.returncode == 0
@@ -159,7 +161,7 @@ def test_model_field_does_not_affect_aggregation(tmp_path: Path) -> None:
         "qwen": {
             "model": "qwen 3 max preview",
             "findings": 10, "gate_rejected": 4, "verify_rejected": 1,
-            "must_fix": 2, "good_to_fix": 3,
+            "must_fix": 2, "tech_debt": 3,
         },
     })
     proc = run_cli(str(repo), "--json")
@@ -168,7 +170,7 @@ def test_model_field_does_not_affect_aggregation(tmp_path: Path) -> None:
     q = data["reviewers"]["qwen"]
     assert q["findings"] == 10
     assert q["must_fix"] == 2
-    assert q["good_to_fix"] == 3
+    assert q["tech_debt"] == 3
     assert q["promotion_rate"] == 0.5
 
 
@@ -180,19 +182,35 @@ def test_model_field_table_output_matches_without_model(tmp_path: Path) -> None:
         "qwen": {
             "model": "Qwen 3 Max",
             "findings": 10, "gate_rejected": 4, "verify_rejected": 1,
-            "must_fix": 2, "good_to_fix": 3,
+            "must_fix": 2, "tech_debt": 3,
         },
     })
     write_stats(repo_b / "issues", 21, "2026-07-01T10:00:00", {
         "qwen": {
             "findings": 10, "gate_rejected": 4, "verify_rejected": 1,
-            "must_fix": 2, "good_to_fix": 3,
+            "must_fix": 2, "tech_debt": 3,
         },
     })
     out_a = run_cli(str(repo_a)).stdout
     out_b = run_cli(str(repo_b)).stdout
-    # 승격률·finding·must/good 등 숫자가 동일하면 통과 (헤더는 동일)
+    # 승격률·finding·must/debt 등 숫자가 동일하면 통과 (헤더는 동일)
     assert "50.0%" in out_a and "50.0%" in out_b
     # 두 출력에서 모델명은 어디에도 나오면 안 됨 (집계 단위는 base명)
     assert "Qwen 3 Max" not in out_a
     assert "qwen 3 max" not in out_a.lower()
+
+
+def test_legacy_type_filename_and_good_to_fix_field_still_aggregate(tmp_path: Path) -> None:
+    """v3 개정 이전 아카이브 파일(`__TYPE-agent-stats.json`, `good_to_fix` 필드)은
+    개명하지 않는다(레거시 불변) — 신규 CLI가 그래도 읽을 수 있어야 한다."""
+    repo = make_repo(tmp_path)
+    write_stats(repo / "issues", 21, "2026-07-01T10:00:00", {
+        "qwen": {"findings": 10, "gate_rejected": 4, "verify_rejected": 1,
+                 "must_fix": 2, "good_to_fix": 3},
+    }, legacy_filename=True)
+    proc = run_cli(str(repo), "--json")
+    assert proc.returncode == 0
+    data = json.loads(proc.stdout)
+    q = data["reviewers"]["qwen"]
+    assert q["tech_debt"] == 3
+    assert q["promotion_rate"] == 0.5

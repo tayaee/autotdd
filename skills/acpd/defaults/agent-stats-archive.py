@@ -3,10 +3,10 @@
 # requires-python = ">=3.12"
 # dependencies = []
 # ///
-"""agent-stats-archive — issue-N__TYPE-agent-stats.json에 archived/duration을 채운다 (issue-47).
+"""agent-stats-archive — issue-N__agent-stats.json에 archived/duration을 채운다 (issue-47, v3 마커 개명).
 
-acpd(aacp.sh/.ps1)가 `issue-N__TYPE-*` 산출물을 아카이브 디렉터리로
-git mv하기 직전, agent-stats.json에 한해 이 스크립트를 먼저 호출한다.
+acpd(aacp.sh/.ps1)가 이 이슈의 산출물(code-review/refix-plan/agent-stats)을
+아카이브 디렉터리로 git mv하기 직전, agent-stats.json에 한해 이 스크립트를 먼저 호출한다.
 기존 `started` 필드를 기준으로 `archived`(현재 로컬 타임존 오프셋 포함
 ISO 8601, 예: `2026-07-13T14:23:01-04:00` — UTC `Z` 아님)와
 `duration`(ISO 8601 duration, archived - started)을 계산해 같은 파일에
@@ -34,7 +34,7 @@ def parse_stream_id(value: str) -> tuple[str, str]:
 
 
 def find_stats_file(repo: Path, stream: str, n: str) -> Path:
-    path = repo / "issues" / f"{stream}-{n}__TYPE-agent-stats.json"
+    path = repo / "issues" / f"{stream}-{n}__agent-stats.json"
     if not path.is_file():
         raise FileNotFoundError(f"{path} 없음")
     return path

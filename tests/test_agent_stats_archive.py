@@ -43,7 +43,7 @@ def make_repo(tmp_path: Path) -> Path:
 
 def write_stats(issues_dir: Path, n: int, data: dict, stream: str = "issue") -> Path:
     issues_dir.mkdir(parents=True, exist_ok=True)
-    p = issues_dir / f"{stream}-{n}__TYPE-agent-stats.json"
+    p = issues_dir / f"{stream}-{n}__agent-stats.json"
     p.write_text(json.dumps(data), encoding="utf-8")
     return p
 

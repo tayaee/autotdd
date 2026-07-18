@@ -87,19 +87,28 @@ class LegacyFilenameError(RuntimeError):
 
 def enumerate_items(worktree: Path, stream: str) -> list[Path]:
     """Return pending work-item paths inside `worktree`, sorted by N
-    ascending. Filename convention v2 (docs/spec/spec-issue-filenames.md):
-    `<stream>-<N>[-<slug>][__<KEY>-<value>]*.md`. Excludes:
-      * Files with any tag (`__TYPE-*` artifacts / `__STATE-*` parked)
+    ascending. Filename convention v3 (docs/spec/spec-issue-filenames.md):
+    `<stream>-<N>[-<slug>][__<마커>].md`. Excludes:
+      * Files with an output/parked marker (`__code-review-by-*` /
+        `__refix-plan` / `__agent-stats` / `__tech-debt-by-*` /
+        `__STATE-manual` / `__STATE-agent-failed`)
       * Reservation-in-progress files (no `## ` section yet)
+    Includes (v3): files with no marker, plus `__must-fix-by-*` and
+    `__analysis-required` — both are pending despite carrying a marker.
     Raises LegacyFilenameError on v1-convention names (reserved-slug
     guard) so old files are never silently misclassified.
     """
     issues_dir = worktree / "issues"
     if not issues_dir.is_dir():
         return []
-    # 태그 없는 파일: <stream>-<N> 또는 <stream>-<N>-<slug> (슬러그는 영문자 시작)
+    # 태그 없는 파일 또는 pending 마커(must-fix-by-/analysis-required)가 붙은 파일
     pending_pat = re.compile(
-        rf"^{re.escape(stream)}-(\d+)(-[a-z][a-z0-9-]*)?\.md$"
+        rf"^{re.escape(stream)}-(\d+)(-[a-z][a-z0-9-]*)?"
+        r"(__(must-fix-by-[a-z0-9-]+|analysis-required))?\.md$"
+    )
+    # 산출물·파킹 마커: 작업 큐에서 제외
+    excluded_marker_pat = re.compile(
+        r"__(code-review-by-|refix-plan|agent-stats|tech-debt-by-|STATE-manual|STATE-agent-failed)"
     )
     # 예약 슬러그 가드: 구 규약 구조 (정확 슬러그 / 산출물 꼬리)
     legacy_pat = re.compile(
@@ -110,7 +119,7 @@ def enumerate_items(worktree: Path, stream: str) -> list[Path]:
     for f in sorted(issues_dir.iterdir()):
         if not f.is_file():
             continue
-        if "__" in f.name:  # 태그 파일(산출물·파킹)은 작업 큐 제외
+        if excluded_marker_pat.search(f.name):  # 산출물·파킹 마커는 작업 큐 제외
             continue
         if legacy_pat.fullmatch(f.name):
             raise LegacyFilenameError(

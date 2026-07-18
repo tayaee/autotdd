@@ -80,7 +80,7 @@ If not done:
 
 파일명 규약의 단일 정본은 `docs/spec/spec-issue-filenames.md`다.
 
-**Done check** (per reviewer `X`): `issues/issue-N__TYPE-code-review__BY-<X>.md` exists and is non-empty (where `<X>` is the base model name, or `self` for self-review — `__BY-` 값은 항상 래퍼 base명이며 버전명은 쓰지 않는다).
+**Done check** (per reviewer `X`): `issues/issue-N__code-review-by-<X>.md` exists and is non-empty (where `<X>` is the base model name, or `self` for self-review — `-by-` 값은 항상 래퍼 base명이며 버전명은 쓰지 않는다).
 
 #### 리뷰어 프롬프트 — 5부 구조 (외부 래퍼·셀프 리뷰 공통)
 
@@ -111,7 +111,7 @@ If not done:
 
 **④ 구조화 finding 포맷**: **자유 산문 금지** — finding당 고정 필드
 (파일:라인 / 코드 인용 / 실패 시나리오 / 확인 방법 / 심각도 제안
-`must-fix`|`good-to-fix`)를 표 또는 고정 섹션으로 강제. Step 3 플래너가
+`must-fix`|`tech-debt`)를 표 또는 고정 섹션으로 강제. Step 3 플래너가
 기계적으로 판정할 수 있는 형태여야 한다.
 
 **⑤ 리뷰 대상 범위** (Step 1에서 산출한 값을 주입):
@@ -128,35 +128,36 @@ If not done:
 For each undone reviewer, launch:
 - **External Reviewers**: For each reviewer `<X>`, launch in parallel:
   ```bash
-  /home/user1/git/harness-project/.local/bin/<X>-cli.sh -p "<위 4부 구조로 조립한 프롬프트 — 산출 파일: issues/issue-<N>__TYPE-code-review__BY-<X>.md>"
+  /home/user1/git/harness-project/.local/bin/<X>-cli.sh -p "<위 4부 구조로 조립한 프롬프트 — 산출 파일: issues/issue-<N>__code-review-by-<X>.md>"
   ```
 - **Self-Review**: If no reviewers were specified, launch a subagent
   in a new context (do not review inline in the same conversation) to write:
-  `issues/issue-N__TYPE-code-review__BY-self.md`. 셀프 리뷰 서브에이전트의 프롬프트에도 위 4부 구조를 동일하게 적용한다 (모델명 첫 줄 기입 포함).
+  `issues/issue-N__code-review-by-self.md`. 셀프 리뷰 서브에이전트의 프롬프트에도 위 4부 구조를 동일하게 적용한다 (모델명 첫 줄 기입 포함).
 
 Failure of one reviewer does NOT stop the others (continue-with-partial). When all parallel launches return, verify each output file exists and is non-empty. Note any failures for step 3.
 
 ### Step 3 — Planner (skip if done)
 
-**Done check**: `issues/issue-N__TYPE-refix-plan.md` exists and is non-empty.
+**Done check**: `issues/issue-N__refix-plan.md` exists and is non-empty.
 
 If not done, the execution session runs inline, in this order:
 
 1. **수집**: Read all available review files matching
-   `issues/issue-N__TYPE-code-review__BY-*.md`.
+   `issues/issue-N__code-review-by-*.md`.
 2. **형식 게이트**: finding에 증거 3요소(파일:라인+코드 인용 / 실패
    시나리오 / 확인 방법)가 하나라도 없으면 내용 불문 기계적으로
    `reject` (사유: "증거 미비"). 근거 제시 책임은 리뷰어에게 있다.
-3. **분류**: 게이트 통과 finding을 `must-fix` / `good-to-fix` /
-   `reject`로 분류.
+3. **분류**: 게이트 통과 finding을 `must-fix` / `tech-debt` /
+   `reject`로 분류 (v3 개정 — 구 `good-to-fix` 용어는 `tech-debt`로
+   전면 개명).
 4. **실질 재검증 (must-fix 한정)**: must-fix 승격 후보는 인용된
    파일:라인을 직접 열어 ① **인용이 실재**하고 ② **주장이 성립**하는지
    확인한 뒤에만 승격한다. 확인 실패 → 근거를 남기고 reject 또는
-   good-to-fix로 강등 (사유: "재검증 실패"). good-to-fix는 파킹되어
+   tech-debt로 강등 (사유: "재검증 실패"). tech-debt는 파킹되어
    사람 눈을 거치므로 재검증을 생략한다. (비용 비대칭: must-fix 1건은
    무인 `/autotdd` 풀사이클을 발동하므로 오판 비용이 재검증 비용보다
    크다.)
-5. **파생 이슈 생성** (`to-tickets` 스킬 활용, 파일명은 규약 v2 + issue-48):
+5. **파생 이슈 생성** (`to-tickets` 스킬 활용, 파일명은 규약 v3 + issue-48):
    - **파일명**: 정규화·override·suffix·다중 리뷰어 정렬은 결정성을 위해
      helper `tools/derive_fixing_slug.py`에 위임한다. SKILL.md prose는
      호출 시점·인자만 명시. helper API·CLI 상세는 `tools/derive_fixing_slug.py`
@@ -169,44 +170,48 @@ If not done, the execution session runs inline, in this order:
    - **충돌 검사**: `python tools/derive_fixing_slug.py suffix
      --existing "<기존 슬러그 csv>" --slug "<신규>"` → 충돌 시 `-2`,
      `-3` suffix 부여.
-   - **파일명 조립** (helper `build_filename` 또는 SKILL.md prose inline):
-     - must-fix → `issue-<신번호>-fixing-<원본>-<finding-slug>__BY-<r1>-<r2>-...md`
-     - good-to-fix → `issue-<신번호>-fixing-<원본>-<finding-slug>__STATE-later__BY-<r1>-<r2>-...md`
-   - **적용 시점**: 본 PR merge 이후 생성되는 모든 fixing 파생부터.
-     merge 이전 archived 파일(`issue-127-fixing-123.md`, `__STATE-later`
-     단일 슬러그)은 **불변** (spec 96줄 "레거시 불변" + "관행·문법 아님"
-     섹션의 "레거시 호환" 항목).
+   - **파일명 조립** (helper `build_filename(new_n, slug, reviewers,
+     tech_debt)` 또는 SKILL.md prose inline):
+     - must-fix → `issue-<신번호>-<finding-slug>__must-fix-by-<r1>-<r2>-...md`
+     - tech-debt → `issue-<신번호>-<finding-slug>__tech-debt-by-<r1>-<r2>-...md`
+   - **원본 이슈 번호는 v3부터 파일명에 넣지 않는다** — 계보(원본 이슈
+     번호, 출처 리뷰 파일명, finding 인용, 재검증 결과)는 본문에만
+     기록한다.
+   - **적용 시점**: 본 v3 개정 이후 생성되는 모든 파생 이슈부터.
+     개정 이전 archived 파일(v1 `issue-127-fixing-123.md`, v2
+     `__STATE-later__BY-...md` 등)은 **불변** (spec 문서 "레거시 불변" +
+     "관행·문법 아님" 섹션의 "레거시 호환" 항목).
    - **중복 finding 규칙** (issue-44): 복수 리뷰어가 같은 결함을 독립
      발견해 승격된 경우 — 파생 이슈는 **1개만** 생성한다(계보에 복수
-     리뷰 파일 인용). stats의 must_fix/good_to_fix 카운트는 **발견한
+     리뷰 파일 인용). stats의 must_fix/tech_debt 카운트는 **발견한
      리뷰어 전원**에게 각각 +1. 최초 발견자 개념은 두지 않는다(병렬
-     실행이므로 무의미). BY 값은 발견한 리뷰어 전원의 base명을 helper
-     `by` subcommand로 알파벳 정렬한 결과(예: `__BY-gemini-qwen-sonnet`).
+     실행이므로 무의미). by 값은 발견한 리뷰어 전원의 base명을 helper
+     `by` subcommand로 알파벳 정렬한 결과(예: `__must-fix-by-gemini-qwen-sonnet`).
    - 채번: issues/ + issues/archive/ 전체에서 **최대 번호 + 1** (번호
      재사용 금지). 생성 직전 기존 번호를 재확인한다.
    - 본문 **계보** 필수: 원본 이슈 번호, 출처 리뷰 파일명, 해당 finding
      인용, 재검증 결과.
-6. **refix-plan 산출**: `issues/issue-N__TYPE-refix-plan.md` — 리뷰어별
+6. **refix-plan 산출**: `issues/issue-N__refix-plan.md` — 리뷰어별
    finding 수, 분류 결과, reject 사유("증거 미비"/"재검증 실패" 구분),
    생성된 파생 이슈 목록. (Step 3의 done check가 이 파일 기준.)
 7. **agent-stats JSON 병합 기록** (issue-43 스코어보드 CLI의 기초 자료):
    같은 판정 데이터를, tdd2가 이미 만들어 둔
-   `issues/issue-N__TYPE-agent-stats.json`(기존 `issue`/`started`/
+   `issues/issue-N__agent-stats.json`(기존 `issue`/`started`/
    `coders` 필드 보존)에 병합 기록한다. 추가하는 필수 필드 —
    `reviewers`(리뷰어 base명 key별: `model` / `findings` /
-   `gate_rejected` / `verify_rejected` / `must_fix` / `good_to_fix`),
+   `gate_rejected` / `verify_rejected` / `must_fix` / `tech_debt`),
    `derived_by_reviewers`(생성된 파생 이슈 파일명 목록). `.json`은 `.md`
    열거에 걸리지 않으므로 파이프라인에 중립 — 집계는 CLI 몫, 여기서는
    기록만.
    - `reviewers` 각 항목의 `model` 필드는 해당 리뷰 파일
-     (`issues/issue-N__TYPE-code-review__BY-<X>.md`) **첫 줄의 버전
+     (`issues/issue-N__code-review-by-<X>.md`) **첫 줄의 버전
      포함 모델명**을 그대로 전사한다. 키는 base명 유지(스코어보드 집계
      단위 불변). 첫 줄에서 모델명을 얻지 못하면 `"unknown"`을 기록한다
      (**침묵 금지** — 필드 누락 금지). 래퍼 뒤 모델이 업그레이드되어도
      stats 한 줄에 전후 이력이 섞이지 않게 한다 (issue-44).
 8. **`coders.<base명>.review_outcome` 병합**: 위와 **같은 write 호출**로
    (파일이 하나이므로 별도 read-modify-write가 아니다), 같은
-   `issues/issue-N__TYPE-agent-stats.json`의 `coders.<base명>.review_outcome`을
+   `issues/issue-N__agent-stats.json`의 `coders.<base명>.review_outcome`을
    채워 넣는다.
    - 키 `<base명>`은 기존 `coders`의 키(tdd2가 Step 5/11에서 생성한 키)를 그대로 사용하며, 새 coder를 추가하지 않는다.
    - `review_outcome` 스키마 (`ts`는 tdd2와 동일한 타임스탬프 규약 —
@@ -216,7 +221,7 @@ If not done, the execution session runs inline, in this order:
        "ts": "<ISO8601, 로컬 오프셋 포함>",
        "findings_received": <이 리뷰어로부터 받은 총 finding 수>,
        "must_fix_count": <이 리뷰어의 finding 중 실질 재검증을 통과해 파생 이슈로 생성된 must-fix 수>,
-       "good_to_fix_count": <이 리뷰어의 finding 중 good-to-fix 분류 수>,
+       "tech_debt_count": <이 리뷰어의 finding 중 tech-debt 분류 수>,
        "refix_plans_written": <이 이슈 사이클에서 플래너가 refix-plan을 작성했으면 1, 리뷰 파일이 없어 작성하지 못했으면 0>
      }
      ```
@@ -226,12 +231,23 @@ If any reviewer files are missing (from failed reviewers in Step 2), prepend a n
 
 ### Step 4 — Coder re-fix (skip if done)
 
-**Done check**: every `issues/issue-N__TYPE-*` file (code-review들, refix-plan, agent-stats.json) has been moved to `issues/archive/<YYYY>/<MM>/<DD>/` — 파일명 그대로, `git mv`로.
+**Done check**: every review/refix-plan/agent-stats output file for this
+issue (`issue-N__code-review-by-*.md`, `issue-N__refix-plan.md`,
+`issue-N__agent-stats.json`) has been moved to
+`issues/archive/<YYYY>/<MM>/<DD>/` — 파일명 그대로, `git mv`로.
 
 If not done:
 The execution session runs:
-- Step 3가 생성한 파생 이슈 중 **pending인 것만** (`issues/issue-*-fixing-N.md` — 태그 없는 파일) `/autotdd`로 처리한다 (passing `worktree` if the original run specified `worktree`). `__STATE-later` 파킹 파생 이슈는 **건드리지 않는다** — 사람이 STATE 태그를 지워 승격할 때까지 대기.
-- 이 이슈의 `__TYPE-*` 산출물(code-review들, refix-plan, agent-stats.json)은 별도로 `git mv`하지 않는다 — 이 이슈에 대해 `aacp`(`.claude/skills/acpd/aacp.sh`)를 호출하면 `issue-N.md`와 함께 자동으로 아카이브된다(agent-stats.json은 그 과정에서 `archived`/`duration`도 함께 채워짐 — issue-47).
+- Step 3가 생성한 파생 이슈 중 **pending인 것만**
+  (`issues/issue-*__must-fix-by-*.md`) `/autotdd`로 처리한다 (passing
+  `worktree` if the original run specified `worktree`).
+  `__tech-debt-by-*` 파킹 파생 이슈는 **건드리지 않는다** — 사람이
+  `__tech-debt-by-<...>` 마커를 파일명에서 지워 승격할 때까지 대기.
+- 이 이슈의 산출물(code-review들, refix-plan, agent-stats.json)은
+  별도로 `git mv`하지 않는다 — 이 이슈에 대해 `aacp`
+  (`.claude/skills/acpd/aacp.sh`)를 호출하면 `issue-N.md`와 함께
+  자동으로 아카이브된다(agent-stats.json은 그 과정에서
+  `archived`/`duration`도 함께 채워짐 — issue-47).
 
 ## Failure policy
 

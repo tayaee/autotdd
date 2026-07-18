@@ -93,14 +93,17 @@ $ArchiveDir = "issues/archive/$(Get-Date -Format 'yyyy/MM/dd')"
 New-Item -ItemType Directory -Force -Path $ArchiveDir | Out-Null
 git mv $IssueFile "$ArchiveDir/issue-$IssueNum.md"
 
-# 2.5. Archive this issue's __TYPE-* artifacts alongside it (code-review
-# files, refix-plan, agent-stats.json -- issue-47). Live artifacts only
-# (Get-ChildItem here is non-recursive, so it never reaches into
-# issues/archive/). agent-stats.json gets its `archived`/`duration`
-# fields stamped by a dedicated helper *before* the move.
-$TypeFiles = Get-ChildItem -Path "issues" -Filter "issue-$IssueNum`__TYPE-*" -File -ErrorAction SilentlyContinue
+# 2.5. Archive this issue's output artifacts alongside it (code-review
+# files, refix-plan, agent-stats.json -- issue-47, v3 marker rename).
+# Live artifacts only (Get-ChildItem here is non-recursive, so it never
+# reaches into issues/archive/). agent-stats.json gets its
+# `archived`/`duration` fields stamped by a dedicated helper *before*
+# the move.
+$TypeFiles = Get-ChildItem -Path "issues" -Filter "issue-$IssueNum`__code-review-by-*" -File -ErrorAction SilentlyContinue
+$TypeFiles += Get-ChildItem -Path "issues" -Filter "issue-$IssueNum`__refix-plan.md" -File -ErrorAction SilentlyContinue
+$TypeFiles += Get-ChildItem -Path "issues" -Filter "issue-$IssueNum`__agent-stats.json" -File -ErrorAction SilentlyContinue
 foreach ($tf in $TypeFiles) {
-    if ($tf.Name -like "*__TYPE-agent-stats.json") {
+    if ($tf.Name -like "*__agent-stats.json") {
         uv run (Join-Path $DefaultsDir "agent-stats-archive.py") $RepoRoot "issue-$IssueNum"
         if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     }

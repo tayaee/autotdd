@@ -97,17 +97,22 @@ ARCHIVE_DIR="issues/archive/$(date +%Y/%m/%d)"
 mkdir -p "$ARCHIVE_DIR"
 git mv "$ISSUE_FILE" "$ARCHIVE_DIR/${STREAM}-${N}.md"
 
-# 2.5. Archive this issue's __TYPE-* artifacts alongside it (code-review
-# files, refix-plan, agent-stats.json — issue-47). Live artifacts only
-# (this glob never reaches into issues/archive/). agent-stats.json gets
-# its `archived`/`duration` fields stamped by a dedicated helper *before*
-# the move, since bash has no clean JSON/ISO-8601-duration support.
+# 2.5. Archive this issue's output artifacts alongside it (code-review
+# files, refix-plan, agent-stats.json — issue-47, v3 marker rename).
+# Live artifacts only (these globs never reach into issues/archive/).
+# agent-stats.json gets its `archived`/`duration` fields stamped by a
+# dedicated helper *before* the move, since bash has no clean
+# JSON/ISO-8601-duration support.
 shopt -s nullglob
-TYPE_FILES=(issues/"${STREAM}-${N}"__TYPE-*)
+TYPE_FILES=(
+  issues/"${STREAM}-${N}"__code-review-by-*
+  issues/"${STREAM}-${N}"__refix-plan.md
+  issues/"${STREAM}-${N}"__agent-stats.json
+)
 shopt -u nullglob
 for tf in "${TYPE_FILES[@]}"; do
   case "$tf" in
-    *__TYPE-agent-stats.json)
+    *__agent-stats.json)
       uv run "$DEFAULTS_DIR/agent-stats-archive.py" "$REPO_ROOT" "${STREAM}-${N}"
       ;;
   esac

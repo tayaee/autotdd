@@ -165,42 +165,50 @@ def test_suffix_on_collision_does_not_mutate_existing() -> None:
 
 def test_build_filename_must_fix_single_reviewer() -> None:
     fn = dfs.build_filename(
-        new_n=49, source_n=48, slug="credential-exposure",
-        reviewers=["qwen"], good_to_fix=False,
+        new_n=49, slug="credential-exposure",
+        reviewers=["qwen"], tech_debt=False,
     )
-    assert fn == "issue-49-fixing-48-credential-exposure__BY-qwen.md"
+    assert fn == "issue-49-credential-exposure__must-fix-by-qwen.md"
 
 
-def test_build_filename_good_to_fix_multi_reviewers_alphabetical() -> None:
+def test_build_filename_tech_debt_multi_reviewers_alphabetical() -> None:
     fn = dfs.build_filename(
-        new_n=50, source_n=48, slug="null-pointer",
-        reviewers=["sonnet", "qwen", "gemini"], good_to_fix=True,
+        new_n=50, slug="null-pointer",
+        reviewers=["sonnet", "qwen", "gemini"], tech_debt=True,
     )
-    assert fn == "issue-50-fixing-48-null-pointer__STATE-later__BY-gemini-qwen-sonnet.md"
+    assert fn == "issue-50-null-pointer__tech-debt-by-gemini-qwen-sonnet.md"
 
 
-def test_build_filename_good_to_fix_self_only() -> None:
+def test_build_filename_tech_debt_self_only() -> None:
     fn = dfs.build_filename(
-        new_n=51, source_n=48, slug="race-condition",
-        reviewers=["self"], good_to_fix=True,
+        new_n=51, slug="race-condition",
+        reviewers=["self"], tech_debt=True,
     )
-    assert fn == "issue-51-fixing-48-race-condition__STATE-later__BY-self.md"
+    assert fn == "issue-51-race-condition__tech-debt-by-self.md"
 
 
 def test_build_filename_must_fix_self_with_others() -> None:
-    # self + 다른 리뷰어 → self 제외, BY 값만 남음
+    # self + 다른 리뷰어 → self 제외, by 값만 남음
     fn = dfs.build_filename(
-        new_n=52, source_n=48, slug="mixed-review",
-        reviewers=["qwen", "self"], good_to_fix=False,
+        new_n=52, slug="mixed-review",
+        reviewers=["qwen", "self"], tech_debt=False,
     )
-    assert fn == "issue-52-fixing-48-mixed-review__BY-qwen.md"
+    assert fn == "issue-52-mixed-review__must-fix-by-qwen.md"
 
 
 def test_build_filename_empty_reviewers_raises() -> None:
     with pytest.raises(ValueError, match="reviewers"):
         dfs.build_filename(
-            new_n=53, source_n=48, slug="x",
-            reviewers=[], good_to_fix=False,
+            new_n=53, slug="x",
+            reviewers=[], tech_debt=False,
+        )
+
+
+def test_build_filename_empty_slug_raises() -> None:
+    with pytest.raises(ValueError, match="slug"):
+        dfs.build_filename(
+            new_n=54, slug="",
+            reviewers=["qwen"], tech_debt=False,
         )
 
 

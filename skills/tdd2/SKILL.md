@@ -27,13 +27,17 @@ duplicating them.
 파일명 규약의 단일 정본은 `docs/spec/spec-issue-filenames.md`다
 (문법 상세·엄격성 규칙·가드의 정확한 패턴 표는 그 문서를 따른다). 요약:
 
-- **문법**: `<stream>-<N>[-<slug>][__<KEY>-<value>]*.md` — stream은
+- **문법(v3)**: `<stream>-<N>[-<slug>][__<마커>].md` — stream은
   `issue`/`autofix`, 슬러그는 영문자로 시작하는 소문자 kebab(사람용
-  라벨, 판정 불관여), KEY는 대문자 `TYPE`/`STATE`/`BY`만(이 순서).
-- **판정 규칙**: `__TYPE-`도 `__STATE-`도 없으면 pending(작업 대상).
-  하나라도 있으면 제외 — `__STATE-later`/`__STATE-manual`/
-  `__STATE-agent-failed`는 파킹(사람이 태그를 지우면 승격),
-  `__TYPE-*`는 산출물(영원히 작업 아님).
+  라벨, 판정 불관여), 마커는 닫힌 리터럴 집합
+  (`code-review-by-<llms>` / `refix-plan` / `agent-stats` /
+  `must-fix-by-<llms>` / `tech-debt-by-<llms>` / `analysis-required` /
+  `STATE-manual` / `STATE-agent-failed`).
+- **판정 규칙**: 마커가 없거나 `must-fix-by-`/`analysis-required`만
+  있으면 pending(작업 대상). 그 외 마커가 하나라도 있으면 제외 —
+  `tech-debt-by-`/`STATE-manual`/`STATE-agent-failed`는 파킹(사람이
+  마커를 지우면 승격), `code-review-by-`/`refix-plan`/`agent-stats`는
+  산출물(영원히 작업 아님).
 - **ID 추출**: 정규식 `^(issue|autofix)-([0-9]+)` — 슬러그·태그가
   있어도 번호는 이걸로 뽑는다.
 - **예약 슬러그 가드**: 태그 없는 파일이 구(v1) 규약 구조에 해당하면
@@ -65,7 +69,7 @@ Run when the user says `/tdd2` with no number:
    ```bash
    for f in issues/issue-*.md; do
      base=$(basename "$f" .md)
-     [[ "$base" == *__* ]] && continue   # 태그 파일(산출물·파킹) 제외
+     [[ "$base" =~ __(code-review-by-|refix-plan|agent-stats|tech-debt-by-|STATE-manual|STATE-agent-failed) ]] && continue   # 산출물·파킹 제외 (must-fix-by-/analysis-required는 pending이므로 통과)
      rest="${base#issue-}"; slug="${rest#*-}"; [ "$slug" = "$rest" ] && slug=""
      case "$slug" in later|manual|agent-failed)
        echo "구 규약 파일 감지: $f — harness-project의 upgrade-issue-filenames.sh 실행 요망" >&2; exit 1 ;;
@@ -87,7 +91,7 @@ Run when the user says `/tdd2` with no number:
    ```bash
    for f in issues/issue-*.md; do
      base=$(basename "$f" .md)
-     [[ "$base" == *__* ]] && continue   # 태그 파일(산출물·파킹) 제외 — 가드는 위와 동일
+     [[ "$base" =~ __(code-review-by-|refix-plan|agent-stats|tech-debt-by-|STATE-manual|STATE-agent-failed) ]] && continue   # 산출물·파킹 제외 (must-fix-by-/analysis-required는 pending이므로 통과) — 가드는 위와 동일
      n=$(echo "$base" | sed -E 's/^issue-([0-9]+).*/\1/')
      grep -q '\*\*구현 완료 일시\*\*: *(미정)' "$f" \
        && [ ! -f "regression-tests/verify-issue-${n}.sh" ] \
@@ -168,7 +172,7 @@ failure has an unambiguous line between what's live and what isn't.
 
    **agent-stats 계측**: 시작 시 `git rev-parse HEAD`를 `<시작HEAD>`로
    기록한다 (Step 11의 loc_added 산출용). 같은 순간 ISO 8601 타임스탬프도
-   얻어 `issues/issue-<#N>__TYPE-agent-stats.json`을 **최초 생성**한다
+   얻어 `issues/issue-<#N>__agent-stats.json`을 **최초 생성**한다
    (파일이 이미 있으면 — 드문 재실행 케이스 — `issue`/`started`는
    보존하고 덮어쓰지 않는다). **타임스탬프 규약** (이 파일의 모든
    ISO 8601 필드에 공통 적용 — `started`/`mvp.ts`/이하 review_outcome.ts
@@ -240,7 +244,7 @@ failure has an unambiguous line between what's live and what isn't.
     regression suite status).
 
     **agent-stats.json — `coders.<base명>.mvp` 채움**: 위 갱신 직전,
-    Step 5가 만들어 둔 `issues/issue-<#N>__TYPE-agent-stats.json`을 읽어
+    Step 5가 만들어 둔 `issues/issue-<#N>__agent-stats.json`을 읽어
     (`issue`/`started` 필드는 보존) `coders.<base명>.mvp`를 채운다:
     ```json
     {
