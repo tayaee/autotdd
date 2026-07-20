@@ -11,14 +11,14 @@ slice at a time) is Matt Pocock's `tdd` skill — this skill assumes
 `tdd` (`~/.claude/skills/tdd/`) is installed and wraps it with this
 project family's local-file SDLC: issues live in `issues/issue-#.md`
 (never GitHub/GitLab), and implementation stops at `git add` — merging
-is a separate step, handled by the `acpd` skill (directly, or chained
+is a separate step, handled by the `aacpd` skill (directly, or chained
 per-issue by `/autotdd`, which also checks that `tdd` is present
 before starting — see that skill if `tdd` turns out to be missing).
 
 No script of its own. For the `run-ruff` / `run-pyright` /
 `run-unit-tests` / `run-regression-tests` / `run-pyright-full` checks
-in the procedure below, this skill shares `acpd`'s resolution
-convention and bundled defaults (`../acpd/defaults/`, a sibling skill
+in the procedure below, this skill shares `aacpd`'s resolution
+convention and bundled defaults (`../aacpd/defaults/`, a sibling skill
 directory — both ship together in this package) rather than
 duplicating them.
 
@@ -111,9 +111,9 @@ number, it just starts — no confirmation.
 
 **Stop at `git add`.** Implement, verify, update the issue file, stage
 everything — then stop. Do not commit, push, archive, or deploy. A
-human (or the `acpd` skill, or `/autotdd` looping both) takes it from
+human (or the `aacpd` skill, or `/autotdd` looping both) takes it from
 there. This boundary matters for `/autotdd`: each issue must be fully
-merged (`tdd2` → `acpd`) before the next one starts, so a mid-batch
+merged (`tdd2` → `aacpd`) before the next one starts, so a mid-batch
 failure has an unambiguous line between what's live and what isn't.
 
 ## Procedure
@@ -165,7 +165,7 @@ failure has an unambiguous line between what's live and what isn't.
 5. **Python projects only** (repo has `pyproject.toml`): run `run-ruff`
    and `run-pyright`. For each, prefer the project's own
    `./run-<name>.sh` if present; otherwise use this package's bundled
-   default at `../acpd/defaults/run-<name>.sh` (relative to this skill
+   default at `../aacpd/defaults/run-<name>.sh` (relative to this skill
    directory — invoke with `bash`, CWD at the repo root; never copy it
    into the project). `run-pyright` is scoped to `src/`, fast.
    Failure → fix code, restart from 5.
@@ -291,7 +291,7 @@ failure has an unambiguous line between what's live and what isn't.
 12. `git add` everything: migration files, code, the updated issue
     file, any `.conflict-with-` notes.
 13. **Stop.** Report what was implemented and that it's ready for
-    `acpd #` (or, mid-batch under `/autotdd`, that it will be chained
+    `aacpd #` (or, mid-batch under `/autotdd`, that it will be chained
     automatically).
 
 Both a human and an agent use the same completion bar:

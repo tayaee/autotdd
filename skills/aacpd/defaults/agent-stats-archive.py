@@ -5,7 +5,7 @@
 # ///
 """agent-stats-archive — issue-N__agent-stats.json에 archived/duration을 채운다 (issue-47, v3 마커 개명).
 
-acpd(aacp.sh/.ps1)가 이 이슈의 산출물(code-review/refix-plan/agent-stats)을
+aacpd(aacp.sh/.ps1)가 이 이슈의 산출물(code-review/refix-plan/agent-stats)을
 아카이브 디렉터리로 git mv하기 직전, agent-stats.json에 한해 이 스크립트를 먼저 호출한다.
 기존 `started` 필드를 기준으로 `archived`(현재 로컬 타임존 오프셋 포함
 ISO 8601, 예: `2026-07-13T14:23:01-04:00` — UTC `Z` 아님)와

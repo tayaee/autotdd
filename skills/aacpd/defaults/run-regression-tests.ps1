@@ -1,4 +1,4 @@
-# acpd default -- used only when the target project has no
+# aacpd default -- used only when the target project has no
 # run-regression-tests.ps1 of its own. Assumes CWD is already the target
 # repo root. Runs every regression-tests/verify-issue-*.sh (via bash) in
 # order. verify-issue-*.sh scripts are always bash, even on Windows hosts.

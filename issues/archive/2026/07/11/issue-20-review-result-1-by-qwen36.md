@@ -43,9 +43,9 @@ found = any((repo / f"deploy{e}").is_file() for e in exts) or any(
 
 **권장:** `deploy-to-*` glob 제거 또는 `deploy-to-[a-z]*` 등으로 명확히.
 
-### P1-2: `check_skills` — `REQUIRED_SKILLS = ("autotdd", "tdd2", "acpd", "tdd")` 의 `tdd` 중복
+### P1-2: `check_skills` — `REQUIRED_SKILLS = ("autotdd", "tdd2", "aacpd", "tdd")` 의 `tdd` 중복
 
-`check_preflight(role="fix")`도 이미 `autotdd, tdd2, acpd`를 검증한다. `tdd` 스킬은 preflight에 포함되지 않지만 doctor는 필수로 체크한다. 이는 **의도된 확장인지 명확하지 않음**.
+`check_preflight(role="fix")`도 이미 `autotdd, tdd2, aacpd`를 검증한다. `tdd` 스킬은 preflight에 포함되지 않지만 doctor는 필수로 체크한다. 이는 **의도된 확장인지 명확하지 않음**.
 
 **권장:** `REQUIRED_SKILLS`에 주석 추가 ("tdd는 issue-XX에서 추가됨") 또는 preflight에 통합.
 

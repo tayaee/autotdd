@@ -1,5 +1,5 @@
 @echo off
-rem acpd default -- used only when the target project has no
+rem aacpd default -- used only when the target project has no
 rem run-regression-tests.bat of its own. Assumes CWD is already the target
 rem repo root. Runs every regression-tests\verify-issue-*.sh (via bash) in
 rem order. verify-issue-*.sh scripts are always bash, even on Windows hosts.

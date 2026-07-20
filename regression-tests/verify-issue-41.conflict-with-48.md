@@ -2,7 +2,7 @@
 
 ## 무엇이 바뀌었나
 
-`verify-issue-41.sh`는 issue-41(autotddreview 파생 이슈 생성)이 도입한
+`verify-issue-41.sh`는 issue-41(autotddreviewfix 파생 이슈 생성)이 도입한
 SKILL.md 형식을 단언한다. 그중 한 단언:
 
 ```bash

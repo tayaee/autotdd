@@ -133,14 +133,14 @@ qwen은 T1-1에서 ping 테스트의 FAKE_MODE 전파 불명을 짚었지만, `c
 
 ## 3. qwen 1차와 불일치하는 항목 (qwen 오판으로 판단)
 
-### qwen P1-2 vs 본 self-audit: `REQUIRED_SKILLS = ("autotdd", "tdd2", "acpd", "tdd")`
+### qwen P1-2 vs 본 self-audit: `REQUIRED_SKILLS = ("autotdd", "tdd2", "aacpd", "tdd")`
 
 **qwen 1차 주장**: "tdd는 preflight에 포함되지 않지만 doctor는 필수로 체크한다. 의도된 확장인지 명확하지 않음."
 
 **본 self-audit 판단**: qwen 오판. **issue-20.md:22 스펙이 명시적으로 4개를 요구**:
 
 ```
-⑦ ~/.claude/skills/{autotdd,tdd2,acpd,tdd} 존재
+⑦ ~/.claude/skills/{autotdd,tdd2,aacpd,tdd} 존재
 ```
 
 `autoqafix_core.py:93-96`의 preflight가 3개만 보는 것은 issue-10의 좁은 정의이고, issue-20이 4개로 확장한 것. README.md:22도 `autotdd` 스킬이 `tdd` 스킬을 의존한다고 명시 (`Matt Pocock's tdd skill`). 즉 doctor가 `tdd`를 추가한 것은 **스펙 의도**이며, preflight의 미반영이 잠재적 후속 이슈. 합리적 분리.

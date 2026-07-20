@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
 # verify-issue-50.sh — agent-stats.json cost_details/cost_summary 계측
-# (log-cost-<base>.py 8개, log-cost-summary.py, tdd2/autotddreview/acpd
+# (log-cost-<base>.py 8개, log-cost-summary.py, tdd2/autotddreviewfix/aacpd
 # SKILL.md 훅). issue-49 재도입 — 모델명은 매번 실행 세션이 파라미터로
 #결정(하드코딩 금지)하되 정확해야 한다는 제약 검증 포함.
 set -u
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SKILL_TDD2="$REPO_ROOT/skills/tdd2/SKILL.md"
-SKILL_REVIEW="$REPO_ROOT/skills/autotddreview/SKILL.md"
-SKILL_ACPD="$REPO_ROOT/skills/acpd/SKILL.md"
-AACP="$REPO_ROOT/skills/acpd/aacp.sh"
+SKILL_REVIEW="$REPO_ROOT/skills/autotddreviewfix/SKILL.md"
+SKILL_AACPD="$REPO_ROOT/skills/aacpd/SKILL.md"
+AACP="$REPO_ROOT/skills/aacpd/aacp.sh"
 COST_ENTRY="$REPO_ROOT/tools/cost_entry.py"
 
 FAIL=0
@@ -47,29 +47,29 @@ done
 # ----- 2. SKILL.md 훅 문구 -----
 has "$SKILL_TDD2" "before mvp" "tdd2: before mvp 계측 지시"
 has "$SKILL_TDD2" "after mvp" "tdd2: after mvp 계측 지시"
-has "$SKILL_REVIEW" "before review" "autotddreview: before review 계측 지시"
-has "$SKILL_REVIEW" "after review" "autotddreview: after review 계측 지시"
-has "$SKILL_REVIEW" "before refix-plan" "autotddreview: before refix-plan 계측 지시"
-has "$SKILL_REVIEW" "after refix-plan" "autotddreview: after refix-plan 계측 지시"
-has "$SKILL_REVIEW" "before refix" "autotddreview: before refix 계측 지시"
-has "$SKILL_REVIEW" "after refix" "autotddreview: after refix 계측 지시"
+has "$SKILL_REVIEW" "before review" "autotddreviewfix: before review 계측 지시"
+has "$SKILL_REVIEW" "after review" "autotddreviewfix: after review 계측 지시"
+has "$SKILL_REVIEW" "before refix-plan" "autotddreviewfix: before refix-plan 계측 지시"
+has "$SKILL_REVIEW" "after refix-plan" "autotddreviewfix: after refix-plan 계측 지시"
+has "$SKILL_REVIEW" "before refix" "autotddreviewfix: before refix 계측 지시"
+has "$SKILL_REVIEW" "after refix" "autotddreviewfix: after refix 계측 지시"
 has "$AACP" "log-cost-summary.py" "aacp.sh: log-cost-summary.py 호출"
-has "$SKILL_ACPD" "log-cost-summary.py" "acpd/SKILL.md: log-cost-summary.py 문서화"
+has "$SKILL_AACPD" "log-cost-summary.py" "aacpd/SKILL.md: log-cost-summary.py 문서화"
 
 # SKILL.md는 pydantic 의존성 때문에 반드시 uv run wrapper(.sh)를 호출해야
 # 한다 — 맨 .py를 직접 부르면 uv 없이 실행될 경우 ModuleNotFoundError.
 has "$SKILL_TDD2" "log-cost-<base명>.sh <repo-path>" "tdd2: .sh wrapper 호출"
 not_has "$SKILL_TDD2" ".py <repo-path>" "tdd2: 맨 .py 직접 호출(repo-path 인자) 0건"
-has "$SKILL_REVIEW" ".sh <repo-path>" "autotddreview: .sh wrapper 호출"
-not_has "$SKILL_REVIEW" ".py <repo-path>" "autotddreview: 맨 .py 직접 호출(repo-path 인자) 0건"
+has "$SKILL_REVIEW" ".sh <repo-path>" "autotddreviewfix: .sh wrapper 호출"
+not_has "$SKILL_REVIEW" ".py <repo-path>" "autotddreviewfix: 맨 .py 직접 호출(repo-path 인자) 0건"
 
 # ----- 2.5 모델명 정확성(issue-50 요구사항 0): SKILL.md 훅 지시문에
 # base명이 리터럴로 하드코딩(예: log-cost-sonnet.sh처럼 특정 모델명이
 # 파일명에 고정)되어 있으면 안 된다 — 항상 <base명>/<X> 같은 플레이스홀더.
 not_has "$SKILL_TDD2" "log-cost-sonnet.sh" "tdd2: model 식별자 하드코딩(log-cost-sonnet.sh 리터럴) 없음"
-not_has "$SKILL_REVIEW" "tools/log-cost-sonnet.sh <repo-path> issue-<N> \"before" "autotddreview: model 식별자 하드코딩 없음"
+not_has "$SKILL_REVIEW" "tools/log-cost-sonnet.sh <repo-path> issue-<N> \"before" "autotddreviewfix: model 식별자 하드코딩 없음"
 has "$SKILL_TDD2" "정확히 동일한 값" "tdd2: 모델명 정확성(동일 값 재사용) 명시"
-has "$SKILL_REVIEW" "정확히 같은 값" "autotddreview: 모델명 정확성(동일 값 재사용) 명시"
+has "$SKILL_REVIEW" "정확히 같은 값" "autotddreviewfix: 모델명 정확성(동일 값 재사용) 명시"
 
 # ----- 3. 스크래치 픽스처로 실제 스크립트 동작 검증 (SKILL.md가 실제로
 # 부르는 .sh wrapper 경유) -----
@@ -141,10 +141,10 @@ trap 'rm -rf "$T" "$T2"' EXIT
   git init -q
   git config user.email "verify50@test.local"
   git config user.name "verify50"
-  mkdir -p issues skills/acpd
-  cp -r "$REPO_ROOT/skills/acpd/defaults" skills/acpd/
-  cp "$AACP" skills/acpd/aacp.sh
-  chmod +x skills/acpd/aacp.sh
+  mkdir -p issues skills/aacpd
+  cp -r "$REPO_ROOT/skills/aacpd/defaults" skills/aacpd/
+  cp "$AACP" skills/aacpd/aacp.sh
+  chmod +x skills/aacpd/aacp.sh
   mkdir -p tools
   cp "$REPO_ROOT/tools/log-cost-summary.py" tools/
 
@@ -155,7 +155,7 @@ EOF
   # NOTE: aacp.sh의 기존(이슈-50과 무관한) 버그 우회 — TYPE_FILES 배열의
   # `__refix-plan.md` 엔트리는 glob 메타문자가 없는 리터럴 경로라
   # nullglob이 적용되지 않는다. 파일이 없으면 `git mv`가 그대로 실패하므로
-  # (순수 tdd2+acpd 플로우처럼 refix-plan.md가 애초에 안 생기는 경우 전부
+  # (순수 tdd2+aacpd 플로우처럼 refix-plan.md가 애초에 안 생기는 경우 전부
   # 영향받는 기존 결함), 이 픽스처에서는 더미 파일을 만들어 우회한다.
   echo "(verify-50 fixture placeholder)" > issues/issue-96__refix-plan.md
   started="$(python3 -c "from datetime import datetime, timedelta; print((datetime.now().astimezone() - timedelta(minutes=5)).isoformat(timespec='seconds'))")"
@@ -166,7 +166,7 @@ EOF2
   git add -A
   git commit -q -m "init"
 
-  bash skills/acpd/aacp.sh 96 "verify-50 test" >/tmp/verify50-aacp.out 2>&1
+  bash skills/aacpd/aacp.sh 96 "verify-50 test" >/tmp/verify50-aacp.out 2>&1
 )
 ARCHIVED_STATS="$(find "$T2/issues/archive" -name "issue-96__agent-stats.json" 2>/dev/null)"
 [ -n "$ARCHIVED_STATS" ] && pass "aacp: agent-stats.json 아카이브됨" || fail "aacp: agent-stats.json 아카이브 안 됨 ($(cat /tmp/verify50-aacp.out 2>/dev/null))"

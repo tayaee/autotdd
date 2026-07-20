@@ -5,7 +5,7 @@
 # ///
 """log-cost-summary — cost_details를 스캔해 모델별 cost_summary를 계산.
 
-acpd(aacp.sh)가 `issue-N__TYPE-agent-stats.json`을 archive 디렉터리로
+aacpd(aacp.sh)가 `issue-N__TYPE-agent-stats.json`을 archive 디렉터리로
 git mv하기 직전, `agent-stats-archive.py`보다 먼저 호출한다 — 이 시점엔
 해당 이슈의 모든 LLM 작업(mvp/review/refix-plan/refix)이 이미 끝나 있다.
 모델별로 five_hour_used_pct/seven_day_used_pct 합을 구해 cost_summary에

@@ -4,41 +4,41 @@ Three Claude Code skills implementing an issue-driven, local-file TDD
 workflow (no GitHub/GitLab — issues are `issues/issue-#.md`). The name
 is literal: **tdd** (via `tdd2`, which extends Matt Pocock's `tdd`
 skill to point at local issue files) **+ auto**mating everything after
-it (`acpd`: archive, add, commit, push, deploy).
+it (`aacpd`: archive, add, commit, push, deploy).
 
 - **`tdd2`** — implement one issue, test-first, stop at `git add`.
   Depends on Matt Pocock's `tdd` skill for the actual red→green→refactor
   discipline. No number given → detect an in-progress issue to resume,
   or pick the smallest pending one to start; asks once before either.
-- **`acpd`** — archive the issue, `git add -u`, commit code+archive
+- **`aacpd`** — archive the issue, `git add -u`, commit code+archive
   together, push, deploy to dev (the target repo's own
   `deploy.{sh,ps1,bat}` or `deploy-to-env.{sh,ps1,bat}`, called as
   `--env dev` — a project-provided script this skill never generates).
   No number given → find what's pending and ask before processing it.
-- **`autotdd`** — fully-automatic: `tdd2` then `acpd` per issue, one
+- **`autotdd`** — fully-automatic: `tdd2` then `aacpd` per issue, one
   issue fully finished before the next starts, never batched, never
   prompts mid-run. With no numbers, lists everything left in `issues/`
   and asks once whether to run through all of it. Also checks that
   `tdd` is installed before starting anything — see its `SKILL.md`.
 
-See each skill's `SKILL.md` for full behavior. `acpd/aacp.{sh,ps1,bat}`
+See each skill's `SKILL.md` for full behavior. `aacpd/aacp.{sh,ps1,bat}`
 are the only backing scripts (`tdd2` and `autotdd` are pure
 orchestration/procedure, no script needed — `tdd2`'s verification steps
-reuse `acpd`'s defaults, see below, rather than duplicating them).
+reuse `aacpd`'s defaults, see below, rather than duplicating them).
 `aacp.sh` is canonical and the most exercised; `aacp.ps1` is a
 line-by-line port for hosts without bash/WSL; `aacp.bat` just forwards
 to `aacp.ps1`. The name is deliberate: these scripts implement the
-first four letters of `acpd` — **A**rchive, **A**dd, **C**ommit,
+first four letters of `aacpd` — **A**rchive, **A**dd, **C**ommit,
 **P**ush — and stop; **D**eploy is the target repo's own
 `deploy.{sh,ps1,bat}` / `deploy-to-env.{sh,ps1,bat}`, which `aacp.*`
 only ever looks for and calls, never generates.
 
 For Python projects (`pyproject.toml` present), both `tdd2` (during
-implementation) and `acpd` (as a final gate before merge) run
+implementation) and `aacpd` (as a final gate before merge) run
 `run-ruff` / `run-pyright` / `run-unit-tests` / `run-regression-tests`
 / `run-pyright-full`. Each resolves independently: the target repo's
 own `./run-<name>.sh` if it has one, otherwise the default bundled at
-`acpd/defaults/run-<name>.{sh,bat,ps1}` (invoked from there, never
+`aacpd/defaults/run-<name>.{sh,bat,ps1}` (invoked from there, never
 copied into the project). `aacp.sh` only ever calls the `.sh`
 defaults and `aacp.ps1` only ever calls the `.ps1` defaults; `.bat`
 defaults exist for a human running a check by hand on Windows.
@@ -63,8 +63,8 @@ npx skills add tayaee/autosdlc -g
 
 * Use `/grill-with-docs` to create `issues/issue-*.md` (and optionally `docs/adr/adr-*.md`, `docs/sdd/sdd-*.md`, `docs/spec/spec-*.md`).
 * Use `/to-spec` to write specs as `docs/spec/spec-*.md`; `/to-tickets` writes tickets as `issues/issue-*.md` (legacy-compatible paths).
-* Add `deploy.{bat,ps1,sh}` (or `deploy-to-env.{bat,ps1,sh}`) to the target repo yourself, accepting `--env <env>`, to deploy your solution to the `dev` environment. `acpd` calls it as `deploy.sh --env dev`; it never creates this file for you.
-* Use `/autotdd` or `/autotdd [issue #s]` to repeat `/tdd2` (implementation) and `/acpd` (`git add -u`, `git commit`, `git push`, then `deploy.{bat,ps1,sh}` or `deploy-to-env.{bat,ps1,sh}` `--env dev` if the target repo has one).
+* Add `deploy.{bat,ps1,sh}` (or `deploy-to-env.{bat,ps1,sh}`) to the target repo yourself, accepting `--env <env>`, to deploy your solution to the `dev` environment. `aacpd` calls it as `deploy.sh --env dev`; it never creates this file for you.
+* Use `/autotdd` or `/autotdd [issue #s]` to repeat `/tdd2` (implementation) and `/aacpd` (`git add -u`, `git commit`, `git push`, then `deploy.{bat,ps1,sh}` or `deploy-to-env.{bat,ps1,sh}` `--env dev` if the target repo has one).
 
 ## Conventions these skills assume in the target repo
 
@@ -72,12 +72,12 @@ npx skills add tayaee/autosdlc -g
   section whose `**구현 완료 일시**:` field is `(미정)` until `tdd2`
   fills it in on completion. That field is the only state signal these
   skills rely on — no separate state file.
-- `issues/archive/YYYY/MM/DD/issue-#.md` — where `acpd` moves a
+- `issues/archive/YYYY/MM/DD/issue-#.md` — where `aacpd` moves a
   finished issue on merge.
 - `regression-tests/verify-issue-#.sh` — per-issue acceptance script,
   written by `tdd2` before it finishes (its existence, combined with an
   unfinished issue, is what `tdd2`'s resume-detection looks for).
 - `deploy.{sh,ps1,bat} --env <env>` (or `deploy-to-env.{sh,ps1,bat}
   --env <env>`) — the deploy entry point, **provided by the target
-  project, not generated by `acpd`**. If neither exists, `acpd` skips
+  project, not generated by `aacpd`**. If neither exists, `aacpd` skips
   the deploy step and tells you to add one.

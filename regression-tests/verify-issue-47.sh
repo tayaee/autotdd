@@ -6,12 +6,12 @@ set -u
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SPEC="$REPO_ROOT/docs/spec/spec-issue-filenames.md"
 SKILL_TDD2="$REPO_ROOT/.claude/skills/tdd2/SKILL.md"
-SKILL_REVIEW="$REPO_ROOT/.claude/skills/autotddreview/SKILL.md"
+SKILL_REVIEW="$REPO_ROOT/.claude/skills/autotddreviewfix/SKILL.md"
 GLOBAL_SKILL_TDD2="$HOME/.claude/skills/tdd2/SKILL.md"
-GLOBAL_SKILL_REVIEW="$HOME/.claude/skills/autotddreview/SKILL.md"
-ARCHIVE_HELPER="$REPO_ROOT/.claude/skills/acpd/defaults/agent-stats-archive.py"
+GLOBAL_SKILL_REVIEW="$HOME/.claude/skills/autotddreviewfix/SKILL.md"
+ARCHIVE_HELPER="$REPO_ROOT/.claude/skills/aacpd/defaults/agent-stats-archive.py"
 CLI="$REPO_ROOT/tools/reviewer-scoreboard.py"
-AACP="$REPO_ROOT/.claude/skills/acpd/aacp.sh"
+AACP="$REPO_ROOT/.claude/skills/aacpd/aacp.sh"
 
 FAIL=0
 fail() { echo "FAIL: $1" >&2; FAIL=1; }
@@ -40,14 +40,14 @@ has "$SPEC" "agent-stats" "spec: agent-stats 존재"
 not_has "$SPEC" "review-stats" "spec: review-stats 완전 제거"
 not_has "$SPEC" "coding-stats" "spec: coding-stats 완전 제거"
 
-# ----- 2. tdd2/autotddreview SKILL.md (로컬+전역) -----
+# ----- 2. tdd2/autotddreviewfix SKILL.md (로컬+전역) -----
 for f in "$SKILL_TDD2" "$SKILL_REVIEW" "$GLOBAL_SKILL_TDD2" "$GLOBAL_SKILL_REVIEW"; do
     not_has "$f" "review-stats.json" "SKILL.md 구 review-stats.json 언급 0건: $(basename "$(dirname "$f")")"
     not_has "$f" "coding-stats.json" "SKILL.md 구 coding-stats.json 언급 0건: $(basename "$(dirname "$f")")"
     has "$f" "agent-stats.json" "SKILL.md agent-stats.json 언급: $(basename "$(dirname "$f")")"
 done
 has "$SKILL_TDD2" "started" "tdd2: started 타임스탬프 기록 서술"
-has "$SKILL_REVIEW" "derived_by_reviewers" "autotddreview: derived_by_reviewers 필드명"
+has "$SKILL_REVIEW" "derived_by_reviewers" "autotddreviewfix: derived_by_reviewers 필드명"
 
 # ----- 3. 신규 헬퍼: archived/duration 계산 -----
 [ -f "$ARCHIVE_HELPER" ] && pass "헬퍼 존재: agent-stats-archive.py" || fail "헬퍼 부재: $ARCHIVE_HELPER"
@@ -138,10 +138,10 @@ trap 'rm -rf "$T" "$T2"' EXIT
   git init -q
   git config user.email "verify47@test.local"
   git config user.name "verify47"
-  mkdir -p issues .claude/skills/acpd
-  cp -r "$REPO_ROOT/.claude/skills/acpd/defaults" .claude/skills/acpd/
-  cp "$AACP" .claude/skills/acpd/aacp.sh
-  chmod +x .claude/skills/acpd/aacp.sh
+  mkdir -p issues .claude/skills/aacpd
+  cp -r "$REPO_ROOT/.claude/skills/aacpd/defaults" .claude/skills/aacpd/
+  cp "$AACP" .claude/skills/aacpd/aacp.sh
+  chmod +x .claude/skills/aacpd/aacp.sh
 
   cat > issues/issue-95.md <<'EOF'
 # issue-95: verify-47 fixture
@@ -156,7 +156,7 @@ EOF2
   git add -A
   git commit -q -m "init"
 
-  bash .claude/skills/acpd/aacp.sh 95 "verify-47 test" >/tmp/verify47-aacp.out 2>&1
+  bash .claude/skills/aacpd/aacp.sh 95 "verify-47 test" >/tmp/verify47-aacp.out 2>&1
 )
 ARCHIVED_STATS="$(find "$T2/issues/archive" -name "issue-95__TYPE-agent-stats.json" 2>/dev/null)"
 ARCHIVED_REVIEW="$(find "$T2/issues/archive" -name "issue-95__TYPE-code-review__BY-self.md" 2>/dev/null)"

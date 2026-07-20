@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# acpd default — used only when the target project has no
+# aacpd default — used only when the target project has no
 # ./run-regression-tests.sh of its own. Assumes CWD is already the target
 # repo root. Runs every regression-tests/verify-issue-*.sh in order.
 set -uo pipefail

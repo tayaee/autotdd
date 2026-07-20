@@ -143,7 +143,7 @@ frequency: <횟수> (<구간 시작> ~ <구간 끝>)
    진실 소스는 `autoqafix_core.peek_lock`/`is_lock_reclaimable`/`acquire_lock`
    (issue-24에서 공용 API로 추출). 정상이면 OK, 부실 잠금(dead_pid,
    stale_lock)이면 회수 가능 안내 OK, 살아있는 잠금이면 FAIL.
-7. **필수 스킬** — `~/.claude/skills/{autotdd,tdd2,acpd,tdd}` 존재.
+7. **필수 스킬** — `~/.claude/skills/{autotdd,tdd2,aacpd,tdd}` 존재.
    `preflight(fix)`와 중복되는 3종은 OK 줄만(부재 시 silent), `tdd`만
    FAIL 계수.
 

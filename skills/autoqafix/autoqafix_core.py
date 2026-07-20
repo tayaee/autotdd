@@ -112,7 +112,7 @@ def preflight(role: str, repo: Path) -> list[str]:
 
     # ⑦ role이 fix/dev면 필수 스킬 존재
     if role in ("fix", "dev"):
-        for skill in ("autotdd", "tdd2", "acpd"):
+        for skill in ("autotdd", "tdd2", "aacpd"):
             if not (Path.home() / ".claude" / "skills" / skill).is_dir():
                 failures.append(_msg(f"~/.claude/skills/{skill} 없음", "autotdd 설치 확인"))
 

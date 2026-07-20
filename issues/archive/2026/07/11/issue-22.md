@@ -1,9 +1,9 @@
-# issue-22: tdd2/autotdd/acpd 스킬의 두 스트림·접미사 인식
+# issue-22: tdd2/autotdd/aacpd 스킬의 두 스트림·접미사 인식
 agent-tier: paid-only
 
 ## 배경
 
-세 스킬의 실체는 이 repo의 `.claude/skills/{tdd2,autotdd,acpd}/`에 있다(사용자
+세 스킬의 실체는 이 repo의 `.claude/skills/{tdd2,autotdd,aacpd}/`에 있다(사용자
 머신에는 `~/.claude/skills/`로 설치/symlink됨). 현재 `issues/issue-*.md` glob이라서
 ① `autofix-#` 스트림을 모르고, ② `issue-3-later.md` 같은 접미사 파일까지 잡는다.
 
@@ -18,7 +18,7 @@ agent-tier: paid-only
      지시를 명시. 판별 규칙: 파일명이 `<stream>-<숫자>.md`와 정확히 일치하는
      것만 대상
    - tdd2의 회귀 스크립트 명명: `regression-tests/verify-<stream>-<N>.sh`
-   - acpd의 commit 접두사: `<stream>-<N>:` (기존 `issue-N:`의 일반화),
+   - aacpd의 commit 접두사: `<stream>-<N>:` (기존 `issue-N:`의 일반화),
      archive 이동 대상도 두 스트림 모두
 2. 수정은 최소 diff로 — 각 파일에서 바뀐 줄 수를 결과 보고에 명시
 3. git 추적 파일이므로 별도 백업은 만들지 않는다 (rollback은 git으로)
@@ -42,9 +42,9 @@ agent-tier: paid-only
     id, 인자 파싱, glob 접미사 제외, verify-<stream>-<N> 경로 명시), 14줄 추가
   - `.claude/skills/autotdd/SKILL.md` — `## Stream conventions` 섹션 신설 (두 스트림,
     glob 접미사 제외, worktree 분기명 `<stream>-<N>`), 8줄 추가
-  - `.claude/skills/acpd/SKILL.md` — `## Stream conventions` 섹션 신설 (두 스트림,
+  - `.claude/skills/aacpd/SKILL.md` — `## Stream conventions` 섹션 신설 (두 스트림,
     archive 경로, commit 접두사, glob 접미사 제외), 10줄 추가
-  - `.claude/skills/acpd/aacp.sh` — `--pending` glob에 `autofix-*.md` 추가 +
+  - `.claude/skills/aacpd/aacp.sh` — `--pending` glob에 `autofix-*.md` 추가 +
     `STREAM`/`N` 분리로 `<stream>-<N>` 일반화 (ISSUE_FILE, archive 경로, commit
     prefix), 7줄 추가 / 2줄 변경 (총 9줄 영향)
   - `regression-tests/verify-issue-22.sh` — 8 assertions (3 SKILL.md × autofix,

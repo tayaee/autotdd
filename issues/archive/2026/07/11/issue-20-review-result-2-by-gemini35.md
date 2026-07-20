@@ -21,8 +21,8 @@
 ### ① 필수 스킬 중복 검사 및 목록 불일치 (Redundancy & Inconsistency)
 - **발견된 문제**:
   - `autoqafix-doctor.py` 내의 [check_preflight](file:///home/user1/git/autotdd/.claude/skills/autoqafix/autoqafix-doctor.py#L61-L70) 함수는 `core.preflight("fix", repo)`를 간접 호출합니다.
-  - [autoqafix_core.py](file:///home/user1/git/autotdd/.claude/skills/autoqafix/autoqafix_core.py#L92-L96)의 `preflight` 내에서는 `role in ("fix", "dev")` 일 때 이미 `autotdd`, `tdd2`, `acpd` 스킬 폴더 존재 여부를 검사하고 에러를 누적합니다.
-  - 그러나 `autoqafix-doctor.py`는 뒤이어 [check_skills](file:///home/user1/git/autotdd/.claude/skills/autoqafix/autoqafix-doctor.py#L161-L168) 함수를 호출하여 동일한 `autotdd`, `tdd2`, `acpd`를 한 번 더 체크하며, 여기에 `tdd`를 추가하여 총 4종의 스킬을 검사합니다.
+  - [autoqafix_core.py](file:///home/user1/git/autotdd/.claude/skills/autoqafix/autoqafix_core.py#L92-L96)의 `preflight` 내에서는 `role in ("fix", "dev")` 일 때 이미 `autotdd`, `tdd2`, `aacpd` 스킬 폴더 존재 여부를 검사하고 에러를 누적합니다.
+  - 그러나 `autoqafix-doctor.py`는 뒤이어 [check_skills](file:///home/user1/git/autotdd/.claude/skills/autoqafix/autoqafix-doctor.py#L161-L168) 함수를 호출하여 동일한 `autotdd`, `tdd2`, `aacpd`를 한 번 더 체크하며, 여기에 `tdd`를 추가하여 총 4종의 스킬을 검사합니다.
 - **영향**:
   - 스킬이 설치되지 않은 환경에서 사전 진단을 돌릴 경우, 동일한 스킬 부재에 대해 FAIL 카운트가 **중복 계수**되어 실제 실패한 진단 항목 수보다 더 큰 exit code 값을 반환하게 됩니다.
   - 또한, `core.preflight` 내부에서는 필수 스킬로 `tdd`가 정의되어 있지 않은 반면, `autoqafix-doctor.py`에서는 `tdd`를 `REQUIRED_SKILLS`에 포함하고 있어 **필수 스킬 정의에 대한 일관성**이 결여되어 있습니다.

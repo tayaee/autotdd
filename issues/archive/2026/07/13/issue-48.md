@@ -3,7 +3,7 @@ agent-tier: any
 
 ## 배경
 
-grill 세션(2026-07-13) 합의. `autotddreview`(issue-41 도입)의 파생 이슈 생성
+grill 세션(2026-07-13) 합의. `autotddreviewfix`(issue-41 도입)의 파생 이슈 생성
 로직이 만들어내는 파일명은 `issue-NN-fixing-<M>__STATE-later.md` 형식
 (spec 116줄) — **계보**(원본 M번 리뷰)만 담고, **어떤 finding을 고치는지**
 식별 불가. 이로 인해:
@@ -111,7 +111,7 @@ derive-fixing-slug.py suffix --existing "a,b,c" --slug "b"
 
 각 subcommand는 결정적 stdout, 에러는 stderr + exit != 0.
 
-### 3. `.claude/skills/autotddreview/SKILL.md` 갱신 (Step 5)
+### 3. `.claude/skills/autotddreviewfix/SKILL.md` 갱신 (Step 5)
 
 line 158–170의 "파생 이슈 생성" 절(line 159–160의 두 명시적 파일명 형식 포함)을
 다음과 같이 교체:
@@ -175,7 +175,7 @@ line 158–170의 "파생 이슈 생성" 절(line 159–160의 두 명시적 파
 1. **bash grep 단언**:
    - `spec-issue-filenames.md`에 "finding-slug", "slug:", "알파벳", "BY-self",
      "레거시 불변" 패턴 존재
-   - `autotddreview/SKILL.md` line 158–170 영역에 `derive-fixing-slug.py`
+   - `autotddreviewfix/SKILL.md` line 158–170 영역에 `derive-fixing-slug.py`
      호출 또는 새 형식 `-fixing-<N>-<slug>` 존재
    - 기존 SKILL.md의 옛 형식 `issue-<신번호>-fixing-<N>.md` 단독 사용 0건
      (helper 호출로 대체됨을 단언)
@@ -193,7 +193,7 @@ line 158–170의 "파생 이슈 생성" 절(line 159–160의 두 명시적 파
 
 - 기존 archived `issue-127-fixing-123.md`, `__STATE-later` 등 일괄 개명 (불변).
 - `__TYPE-code-review__BY-<reviewer>` 같은 다른 산출물 파일명 형식 변경 (이번 작업은 fixing 파생만).
-- 전역 `~/.claude/skills/autotddreview/SKILL.md` 동기화 (별도 issue).
+- 전역 `~/.claude/skills/autotddreviewfix/SKILL.md` 동기화 (별도 issue).
 - `tools/reviewer-scoreboard.py` 등 다른 도구 손대기 (이번 작업과 무관).
 - harness-project의 `upgrade-issue-filenames.sh`(구→신 마이그레이션용) 변경.
 - 새 KEY (`__DESC-` 등) 도입 — 닫힌 KEY 집합 (`TYPE`/`STATE`/`BY`) 확장 금지.
@@ -208,7 +208,7 @@ line 158–170의 "파생 이슈 생성" 절(line 159–160의 두 명시적 파
       `suffix_on_collision`, `build_filename`) + 3개 CLI subcommand
       (`slug`, `by`, `suffix`).
 - [ ] `tests/test_derive_fixing_slug.py` 신규: pytest 케이스 ≥ 10건.
-- [ ] `.claude/skills/autotddreview/SKILL.md` Step 5: 옛 형식 `fixing-<N>.md`
+- [ ] `.claude/skills/autotddreviewfix/SKILL.md` Step 5: 옛 형식 `fixing-<N>.md`
       / `__STATE-later` 단일 슬러그 명시 0건, `derive-fixing-slug.py` 호출 1건 이상.
 - [ ] `regression-tests/verify-issue-48.sh` 신규: bash grep ≥ 6건 + pytest
       게이트 + helper CLI ≥ 2건. 전체 회귀 PASS, `pytest tests/test_derive_fixing_slug.py`
@@ -218,7 +218,7 @@ line 158–170의 "파생 이슈 생성" 절(line 159–160의 두 명시적 파
 
 `bash regression-tests/verify-issue-48.sh` (V3 3개 층 단언):
 - spec-issue-filenames.md에 새 관행/예시 존재, 구 형식 단독 사용 0건
-- `autotddreview/SKILL.md` Step 5에 helper 호출 존재
+- `autotddreviewfix/SKILL.md` Step 5에 helper 호출 존재
 - `pytest tests/test_derive_fixing_slug.py -q` exit 0, 케이스 ≥ 10건
 - helper CLI: `--reviewers "qwen,sonnet,gemini"` → `gemini-qwen-sonnet`,
   `--existing "a,b" --slug "a"` → `a-2`
@@ -231,7 +231,7 @@ line 158–170의 "파생 이슈 생성" 절(line 159–160의 두 명시적 파
 - `tools/derive_fixing_slug.py` — 신규 (PEP723, stdlib only, 5개 공개 함수 + 3개 CLI subcommand: `slug`/`by`/`suffix`)
 - `tests/test_derive_fixing_slug.py` — 신규 pytest (43 케이스: 정규화/override/suffix/정렬/BY-self/build_filename/CLI subprocess)
 - `pytest.ini` — 신규 (pythonpath = tools — helper를 라이브러리 단언에서 import 가능하도록)
-- `.claude/skills/autotddreview/SKILL.md` — Step 5의 옛 두 줄(`fixing-<N>.md` / `__STATE-later`)을 helper 호출 4건(slug/by/suffix/build_filename)로 교체, 다중 작성자 BY 정렬·레거시 불변 명시
+- `.claude/skills/autotddreviewfix/SKILL.md` — Step 5의 옛 두 줄(`fixing-<N>.md` / `__STATE-later`)을 helper 호출 4건(slug/by/suffix/build_filename)로 교체, 다중 작성자 BY 정렬·레거시 불변 명시
 - `regression-tests/verify-issue-48.sh` — 신규 (V3 3개 층: bash grep 8건 + pytest 게이트 + helper CLI 7건)
 - `regression-tests/verify-issue-41.sh` — `-fixing-<N>` 단언을 `-fixing-<`로 일반화 (옛/신 prefix 매치)
 - `regression-tests/verify-issue-41.conflict-with-48.md` — 신규 (verify-41 단언 변경 사유 문서화)
@@ -246,7 +246,7 @@ line 158–170의 "파생 이슈 생성" 절(line 159–160의 두 명시적 파
    `python tools/derive_fixing_slug.py` (subcommand `slug`/`by`/`suffix`)
    형태로 자연스럽다. SKILL.md/verify-issue-48.sh 모두 새 파일명으로 갱신.
 2. **helper `by` subcommand의 CLI 플래그명**: 계획은 `--reviewers`였으나
-   `--names`로 변경. 이유: autotddreview SKILL.md의 옛 CLI 플래그
+   `--names`로 변경. 이유: autotddreviewfix SKILL.md의 옛 CLI 플래그
    (`--reviewers`는 v3에서 제거됨)와 의미가 충돌해 `verify-issue-38.sh`의
    "옛 `--reviewers` 플래그 부재" 단언을 깨뜨렸다. helper 내부 함수명
    `sort_reviewers`/`build_filename`은 그대로, CLI 플래그만 `--names`로

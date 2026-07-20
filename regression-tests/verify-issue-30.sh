@@ -153,7 +153,7 @@ cp "$SKILL_DIR/autoqafix_core.py" "$fake_home/.claude/skills/autoqafix/"
 # select-llm.py는 의도적으로 복사하지 않음
 
 # preflight가 .claude/skills 안의 다른 스킬들을 검사하므로 더미 디렉토리 필요
-for s in autotdd tdd2 acpd tdd; do
+for s in autotdd tdd2 aacpd tdd; do
     mkdir -p "$fake_home/.claude/skills/$s"
 done
 

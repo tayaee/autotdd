@@ -1,9 +1,9 @@
 ---
-name: autotddreview
-description: Multi-model implementation → review → synthesis → re-fix loop, fully unattended per issue. Use when the user says "/autotddreview", "autotddreview #", or gives issue numbers (e.g., `autotddreview 21 22 23 minimax sonnet`). One issue fully finished before the next starts; reviewers within an issue run in parallel. Coupled to harness-project wrappers at /home/user1/git/harness-project/.local/bin/.
+name: autotddreviewfix
+description: Multi-model implementation → review → synthesis → re-fix loop, fully unattended per issue. Use when the user says "/autotddreviewfix", "autotddreviewfix #", or gives issue numbers (e.g., `autotddreviewfix 21 22 23 minimax sonnet`). One issue fully finished before the next starts; reviewers within an issue run in parallel. Coupled to harness-project wrappers at /home/user1/git/harness-project/.local/bin/.
 ---
 
-# autotddreview — multi-model review loop, unattended
+# autotddreviewfix — multi-model review loop, unattended
 
 Implements a 4-step cycle for each issue number, fully unattended:
 
@@ -36,9 +36,9 @@ Note: The old options (model, coder, reviewers, and planner with double dashes) 
 
 Examples:
 
-- `autotddreview 21` — Runs issue 21 with self-review.
-- `autotddreview 21 22 23 minimax sonnet` — Runs issues 21, 22, and 23 sequentially. Reviewers are minimax and sonnet (running in parallel).
-- `autotddreview 21 22 23 worktree minimax` — Runs issues 21, 22, and 23 in worktree isolation mode, with minimax as the reviewer.
+- `autotddreviewfix 21` — Runs issue 21 with self-review.
+- `autotddreviewfix 21 22 23 minimax sonnet` — Runs issues 21, 22, and 23 sequentially. Reviewers are minimax and sonnet (running in parallel).
+- `autotddreviewfix 21 22 23 worktree minimax` — Runs issues 21, 22, and 23 in worktree isolation mode, with minimax as the reviewer.
 
 ## cwd validation
 
@@ -282,7 +282,7 @@ The execution session runs:
   호출한다(같은 `<base명>`, "before refix"와 짝을 이룸).
 - 이 이슈의 산출물(code-review들, refix-plan, agent-stats.json)은
   별도로 `git mv`하지 않는다 — 이 이슈에 대해 `aacp`
-  (`.claude/skills/acpd/aacp.sh`)를 호출하면 `issue-N.md`와 함께
+  (`.claude/skills/aacpd/aacp.sh`)를 호출하면 `issue-N.md`와 함께
   자동으로 아카이브된다(agent-stats.json은 그 과정에서
   `archived`/`duration`도 함께 채워짐 — issue-47).
 
@@ -295,11 +295,11 @@ When continuing past failures, log the failure clearly in the final summary, but
 
 ## Idempotency
 
-Every step's "done check" is file-based. Re-running `autotddreview N` after a partial run will skip already-finished steps and resume from where it left off. To force re-do, `rm` the relevant output file(s) first.
+Every step's "done check" is file-based. Re-running `autotddreviewfix N` after a partial run will skip already-finished steps and resume from where it left off. To force re-do, `rm` the relevant output file(s) first.
 
 ## Multi-issue behavior
 
-Issues are processed strictly sequentially: `autotddreview 21 22 23` finishes 21 fully (all 4 steps), then 22, then 23. Within each issue, reviewers run in parallel.
+Issues are processed strictly sequentially: `autotddreviewfix 21 22 23` finishes 21 fully (all 4 steps), then 22, then 23. Within each issue, reviewers run in parallel.
 
 ## Output / report
 

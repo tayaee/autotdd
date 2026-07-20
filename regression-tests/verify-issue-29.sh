@@ -40,7 +40,7 @@ CLEANUP+=("$fake_home")
 mkdir -p "$fake_home/.claude/skills/autoqafix"
 mkdir -p "$fake_home/.claude/skills/autotdd"
 mkdir -p "$fake_home/.claude/skills/tdd2"
-mkdir -p "$fake_home/.claude/skills/acpd"
+mkdir -p "$fake_home/.claude/skills/aacpd"
 mkdir -p "$fake_home/.claude/skills/tdd"
 
 # 복사 대상 파일들을 임시 스킬 경로로 복사

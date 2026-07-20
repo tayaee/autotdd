@@ -110,7 +110,7 @@ def test_corrupt_json_warns_and_continues(tmp_path: Path) -> None:
 
 
 def test_coder_only_file_without_reviewers_is_not_corruption(tmp_path: Path) -> None:
-    """리뷰 사이클 없이 순수 /tdd2 + /acpd만 거친 이슈는 reviewers 키 자체가 없다.
+    """리뷰 사이클 없이 순수 /tdd2 + /aacpd만 거친 이슈는 reviewers 키 자체가 없다.
 
     이는 손상이 아니라 정상 상태(issue-47) — 경고 없이 조용히 리뷰어
     집계에서만 제외되어야 한다(coders 집계에는 영향 없음, 그건

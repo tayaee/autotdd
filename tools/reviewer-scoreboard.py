@@ -5,7 +5,7 @@
 # ///
 """reviewer-scoreboard — 리뷰어/구현자 스코어보드 CLI (issue-43, issue-47, v3 마커 개명).
 
-autotddreview의 플래너(issue-41)와 tdd2(issue-45/46)가 한 이슈당 하나씩
+autotddreviewfix의 플래너(issue-41)와 tdd2(issue-45/46)가 한 이슈당 하나씩
 남기는 `issues/issue-N__agent-stats.json`(issue-47에서 review-stats.json
 + coding-stats.json을 통합; v3에서 `__TYPE-agent-stats.json`→
 `__agent-stats.json`으로 개명)을 라이브·아카이브에서 모두 모아 모델별로
@@ -55,7 +55,7 @@ def _parse_iso_date(value: object) -> date | None:
 def collect(repo: Path, since: date | None) -> tuple[dict[str, dict[str, int]], int]:
     """리뷰어 agent-stats JSON을 재귀 수집·집계. 손상 파일은 경고 후 계속.
 
-    `reviewers` 키가 아예 없는 파일(순수 /tdd2 + /acpd만 거쳐 리뷰
+    `reviewers` 키가 아예 없는 파일(순수 /tdd2 + /aacpd만 거쳐 리뷰
     사이클이 없었던 이슈)은 손상이 아니라 정상 상태(issue-47) —
     조용히 건너뛴다(경고 없음). `reviewers`가 있는데 객체가 아니거나
     JSON 자체가 손상된 경우만 경고.

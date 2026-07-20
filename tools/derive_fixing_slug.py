@@ -5,7 +5,7 @@
 # ///
 """derive-fixing-slug — 파생 이슈 파일명 빌더 헬퍼 (issue-48, v3 규약 개정).
 
-autotddreview의 Step 5가 리뷰 finding마다 만드는 파생 이슈 파일명 형식
+autotddreviewfix의 Step 5가 리뷰 finding마다 만드는 파생 이슈 파일명 형식
 `issue-<신번호>-<finding-slug>__must-fix-by-<r1>-<r2>-...md`
 (또는 tech_debt=True이면 `__tech-debt-by-...md`)을 결정성 있게 조립한다.
 원본 이슈 번호는 v3부터 파일명에 넣지 않는다 — 계보는 파생 이슈 본문에

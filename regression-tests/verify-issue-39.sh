@@ -53,19 +53,19 @@ skill_has() { # $1=skill $2=pattern $3=desc
     fi
 }
 
-for s in tdd2 autotdd acpd; do
+for s in tdd2 autotdd aacpd; do
     skill_has "$s" "__STATE-" "STATE 태그 서술"
     skill_has "$s" "spec-issue-filenames" "spec 정본 참조"
 done
 for s in tdd2 autotdd; do
     skill_has "$s" "upgrade-issue-filenames.sh" "예약 슬러그 가드(upgrade 안내)"
 done
-skill_has autotddreview "__TYPE-code-review__BY-" "리뷰 파일명 태그"
-skill_has autotddreview "__BY-self" "셀프 리뷰 BY-self"
-skill_has autotddreview "__TYPE-refix-plan" "refix-plan 파일명"
+skill_has autotddreviewfix "__TYPE-code-review__BY-" "리뷰 파일명 태그"
+skill_has autotddreviewfix "__BY-self" "셀프 리뷰 BY-self"
+skill_has autotddreviewfix "__TYPE-refix-plan" "refix-plan 파일명"
 
 # ----- 3. SKILL.md 4종: 구 문자열 부재 -----
-for s in tdd2 autotdd acpd autotddreview; do
+for s in tdd2 autotdd aacpd autotddreviewfix; do
     f="$SKILL_DIR/$s/SKILL.md"
     if grep -qE '(\*|[0-9#N>])-(later|manual|agent-failed)\.md' "$f" 2>/dev/null; then
         fail "$s: 구 파킹 접미사 문자열 잔존"

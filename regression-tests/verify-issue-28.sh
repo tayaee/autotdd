@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Verifies issue-28: doctor 스킬 검사 중복 FAIL dedupe
-# - preflight(fix)가 이미 {autotdd,tdd2,acpd} 부재를 보고하므로
+# - preflight(fix)가 이미 {autotdd,tdd2,aacpd} 부재를 보고하므로
 #   check_skills()는 해당 3종에 대해 FAIL을 중복 계수해서는 안 됨.
 # - tdd(중복되지 않는 마지막 스킬)만 check_skills()에서 FAIL 계수.
 # - 4종 모두 정상일 때 OK 스킬 <name> 4줄 출력 유지.
@@ -57,7 +57,7 @@ make_fake_home() {
     CLEANUP+=("$fake_home")
     mkdir -p "$fake_home/.claude/skills"
     # 4종 모두 설치한 뒤 누락시킬 것만 제거
-    for s in autotdd tdd2 acpd tdd; do
+    for s in autotdd tdd2 aacpd tdd; do
         mkdir -p "$fake_home/.claude/skills/$s"
     done
     if [ -n "$missing_skill" ]; then
@@ -116,7 +116,7 @@ if [ "$fail_lines_2" -eq 0 ]; then
 else
     fail "Scenario 2 (4종 정상): FAIL $fail_lines_2건 (회귀) — output: $out2"
 fi
-expected_names=$(printf 'OK 스킬 acpd\nOK 스킬 autotdd\nOK 스킬 tdd\nOK 스킬 tdd2\n' | sort)
+expected_names=$(printf 'OK 스킬 aacpd\nOK 스킬 autotdd\nOK 스킬 tdd\nOK 스킬 tdd2\n' | sort)
 got_names="$(echo "$ok_skill_names" | sort -u)"
 if [ "$got_names" = "$expected_names" ]; then
     pass "Scenario 2 (4종 정상): OK 스킬 4종 전부 출력"

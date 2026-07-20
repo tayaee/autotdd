@@ -1,5 +1,5 @@
 @echo off
-rem acpd default -- used only when the target project has no
+rem aacpd default -- used only when the target project has no
 rem run-pyright.bat of its own. Assumes CWD is already the target repo root.
 rem Quick pass: type-checks src\ only. See run-pyright-full.bat for the
 rem whole project.

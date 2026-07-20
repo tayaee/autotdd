@@ -1,9 +1,9 @@
 ---
-name: acpd
-description: Archive an implemented issue, stage remaining tracked changes, commit code+archive together, push, and deploy to dev. Use when the user says "/acpd", "acpd #", or asks to archive+commit+push+deploy an issue (typically right after /tdd2 leaves changes staged).
+name: aacpd
+description: Archive an implemented issue, stage remaining tracked changes, commit code+archive together, push, and deploy to dev. Use when the user says "/aacpd", "aacpd #", or asks to archive+commit+push+deploy an issue (typically right after /tdd2 leaves changes staged).
 ---
 
-# acpd — archive, add -u, commit, push, deploy
+# aacpd — archive, add -u, commit, push, deploy
 
 Merges a `/tdd2`-staged issue into `main` and deploys it to dev, in one
 commit. Companion skill: `/tdd2` (implements, stops at `git add`).
@@ -43,7 +43,7 @@ Two issue streams are handled:
 
 ## A naming note before anything else
 
-`acpd` is a sequence of **five** steps: **A**rchive the issue file,
+`aacpd` is a sequence of **five** steps: **A**rchive the issue file,
 git **A**dd -u, **C**ommit, **P**ush, **D**eploy. This skill's own
 script only implements the first four — it's called `aacp.sh`
 (`.ps1`/`.bat` too), named after exactly what it does. The fifth step,
@@ -54,21 +54,21 @@ They live in different places:
 
 | | Path | What it is |
 |---|---|---|
-| This skill's script | `.claude/skills/acpd/aacp.{sh,ps1,bat}` | What you invoke to run the whole archive→add→commit→push→deploy pipeline |
+| This skill's script | `.claude/skills/aacpd/aacp.{sh,ps1,bat}` | What you invoke to run the whole archive→add→commit→push→deploy pipeline |
 | Target repo's script (project-provided) | `<target-repo>/deploy.{sh,ps1,bat}` or `<target-repo>/deploy-to-env.{sh,ps1,bat}` | The project's own `--env <env>` deploy hook, called by the skill's script at the very end, if it exists |
 
-Everywhere below, "this script" / "the acpd script" means the former.
+Everywhere below, "this script" / "the aacpd script" means the former.
 
 ## Run it
 
 ### Explicit issue number — no prompts
 
 ```bash
-bash .claude/skills/acpd/aacp.sh <issue-number> <commit-summary...>
+bash .claude/skills/aacpd/aacp.sh <issue-number> <commit-summary...>
 ```
 
 ```bash
-bash .claude/skills/acpd/aacp.sh 42 "KP115 전력 캐시 만료 버그 수정"
+bash .claude/skills/aacpd/aacp.sh 42 "KP115 전력 캐시 만료 버그 수정"
 ```
 
 On a Windows host without bash/WSL, use `aacp.ps1` (native
@@ -78,9 +78,9 @@ most-exercised implementation; the other two mirror it. See Gotchas.
 
 ### No issue number — find what's pending, then ask
 
-When the user says `/acpd` with no number:
+When the user says `/aacpd` with no number:
 
-1. Run `bash .claude/skills/acpd/aacp.sh --pending` to list issue
+1. Run `bash .claude/skills/aacpd/aacp.sh --pending` to list issue
    numbers whose `## 구현 결과` is already filled in (i.e. `/tdd2`
    finished them) but haven't been archived/deployed yet.
 2. If empty: report there's nothing pending. Stop.
@@ -117,7 +117,7 @@ itself.
 
 Fails fast (`set -e`, exit 1) with no git side effects if
 `issues/issue-<#>.md` doesn't exist, or if any step-0 check fails —
-check the issue number first, and don't call `acpd` on code that
+check the issue number first, and don't call `aacpd` on code that
 hasn't already passed `/tdd2`'s own verification.
 
 ## The five checks (Python projects only)
@@ -130,11 +130,11 @@ copied into the project, just invoked from the skill directory with
 CWD already set to the repo root. `.bat`/`.ps1` siblings exist in
 `defaults/` for a human on Windows running the equivalent by hand, and
 `aacp.ps1` resolves `.ps1` project-or-default the same way — but
-each of `acpd`'s own three entry scripts only ever calls its own
+each of `aacpd`'s own three entry scripts only ever calls its own
 platform's flavor.
 
 This is a final gate, not a substitute for `/tdd2`'s own step 5–9
-verification — by the time `acpd` runs, these should already be green.
+verification — by the time `aacpd` runs, these should already be green.
 It exists so nothing broken reaches `main`/dev even if the working
 tree changed after `/tdd2` finished.
 
@@ -174,7 +174,7 @@ under `issues/archive/`, a different path) for that signal.
   (`Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`) or use
   `aacp.sh` under WSL/git-bash instead.
 - **The target repo's deploy script is a per-project convention this
-  skill never creates.** Deploy is step 5 of `acpd` in name only —
+  skill never creates.** Deploy is step 5 of `aacpd` in name only —
   it's the one step this skill deliberately doesn't implement. Setting
   up `deploy.{sh,ps1,bat}` (or `deploy-to-env.{sh,ps1,bat}`) in the
   target repo, and making it accept `--env dev`, is the target

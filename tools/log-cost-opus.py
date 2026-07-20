@@ -7,7 +7,7 @@
 
 check-usage --json의 "claude" row(five_hour/seven_day utilization)를
 조회해 대상 이슈의 agent-stats.json cost_details에 이벤트를 append한다.
-tdd2/autotddreview SKILL.md가 각 단계(mvp/review/refix-plan/refix) 전후에
+tdd2/autotddreviewfix SKILL.md가 각 단계(mvp/review/refix-plan/refix) 전후에
 호출한다.
 
 사용법:

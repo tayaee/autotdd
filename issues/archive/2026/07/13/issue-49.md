@@ -4,7 +4,7 @@ agent-tier: any
 ## 배경
 
 grill 세션(2026-07-13) 합의. `/autotdd`만 반복 실행한 뒤 나중에 한 번
-review/fix를 돌리는 방식과, `/autotddreview`(구현→리뷰→플랜→refix 4단계
+review/fix를 돌리는 방식과, `/autotddreviewfix`(구현→리뷰→플랜→refix 4단계
 루프)를 매 이슈마다 도는 방식 중 어느 쪽이 나은지 판단하려면 review/fix
 루프 자체의 오버헤드(쿼터 소모량)를 실측해야 한다. 지금까지
 `agent-stats.json`(issue-47)은 `coders`/`reviewers` 축의 산출물 품질(LOC,
@@ -31,7 +31,7 @@ review/fix를 돌리는 방식과, `/autotddreview`(구현→리뷰→플랜→r
   모델로 출력 스키마를 통일한다. `--dryrun` 옵션으로 실제 기록 없이
   계산만 확인할 수 있어야 한다.
 - `cost_summary`는 별도 스크립트(`log-cost-summary.py`)가 이슈의 모든
-  LLM 작업이 끝난 acpd 아카이브 시점에 `cost_details`를 스캔해 계산한다
+  LLM 작업이 끝난 aacpd 아카이브 시점에 `cost_details`를 스캔해 계산한다
   (기존 `agent-stats-archive.py`가 `archived`/`duration`을 채우는 것과
   같은 훅, 그 직전).
 
@@ -79,7 +79,7 @@ review/fix를 돌리는 방식과, `/autotddreview`(구현→리뷰→플랜→r
 - Step 11(`coders.<base명>.mvp` 채움 직후): "after mvp" 이벤트 기록
   지시 추가.
 
-### 5. `autotddreview/SKILL.md` — review/refix-plan/refix 전후 계측
+### 5. `autotddreviewfix/SKILL.md` — review/refix-plan/refix 전후 계측
 
 - Step 2(Reviewers): 리뷰어별 개별 before/after 쌍(외부 리뷰어는
   `<X>-cli.sh` 호출 전후, self-review는 서브에이전트 launch 전후 —
@@ -89,13 +89,13 @@ review/fix를 돌리는 방식과, `/autotddreview`(구현→리뷰→플랜→r
 - Step 4(Coder re-fix): 파생 이슈 처리 시작 전 "before refix", 전부
   끝난 직후 "after refix" — 파생 이슈 개수와 무관하게 **한 쌍만**.
 
-### 6. `acpd/aacp.sh` — cost_summary 계산 훅
+### 6. `aacpd/aacp.sh` — cost_summary 계산 훅
 
 - `issue-N__TYPE-agent-stats.json`을 archive 디렉터리로 `git mv`하기
   직전, 기존 `agent-stats-archive.py` 호출 **바로 앞**에
   `uv run tools/log-cost-summary.py "$REPO_ROOT" "${STREAM}-${N}"`를
   추가한다.
-- `acpd/SKILL.md` 문서도 이 새 훅을 반영해 갱신한다.
+- `aacpd/SKILL.md` 문서도 이 새 훅을 반영해 갱신한다.
 
 ### 7. 하지 말 것
 
@@ -115,11 +115,11 @@ review/fix를 돌리는 방식과, `/autotddreview`(구현→리뷰→플랜→r
 - [ ] `tools/log-cost-summary.py` 신규: 모델별 `five_hour_sum`/
       `seven_day_sum` 계산해 `cost_summary`에 기록, `--dryrun` 지원.
 - [ ] `tdd2/SKILL.md`: Step 5/11에 before/after mvp 계측 지시 존재.
-- [ ] `autotddreview/SKILL.md`: Step 2(리뷰어별)/Step 3/Step 4에
+- [ ] `autotddreviewfix/SKILL.md`: Step 2(리뷰어별)/Step 3/Step 4에
       before/after 계측 지시 존재, Step 4는 파생 이슈 전체를 감싸는
       한 쌍만.
-- [ ] `acpd/aacp.sh`: `agent-stats-archive.py` 호출 직전
-      `log-cost-summary.py` 호출 존재. `acpd/SKILL.md` 동기화.
+- [ ] `aacpd/aacp.sh`: `agent-stats-archive.py` 호출 직전
+      `log-cost-summary.py` 호출 존재. `aacpd/SKILL.md` 동기화.
 - [ ] `regression-tests/verify-issue-49.sh`: 8개 스크립트 + summary
       스크립트 실제 호출(스크래치 픽스처) + aacp.sh 전체 훅 흐름 시뮬레이션
       + SKILL.md grep 단언.
@@ -135,7 +135,7 @@ review/fix를 돌리는 방식과, `/autotddreview`(구현→리뷰→플랜→r
   합산됨을 확인(null 제외, 전부 null이면 결과도 null).
 - 임시 git repo에서 `aacp.sh`를 끝까지 실행해 `cost_summary`가
   `archived`/`duration`과 함께 최종 아카이브 파일에 존재함을 확인.
-- `tdd2`/`autotddreview`/`acpd` SKILL.md에 관련 지시 문구 존재.
+- `tdd2`/`autotddreviewfix`/`aacpd` SKILL.md에 관련 지시 문구 존재.
 
 ## 구현 결과
 
@@ -161,17 +161,17 @@ review/fix를 돌리는 방식과, `/autotddreview`(구현→리뷰→플랜→r
   resolve).
 - `.claude/skills/tdd2/SKILL.md` — Step 5/11에 "before mvp"/"after mvp"
   계측 지시 추가(`.sh` wrapper 호출, Windows `.bat`/`.ps1` 안내).
-- `.claude/skills/autotddreview/SKILL.md` — Step 2(리뷰어별 개별
+- `.claude/skills/autotddreviewfix/SKILL.md` — Step 2(리뷰어별 개별
   before/after review), Step 3(before/after refix-plan), Step 4(파생
   이슈 전체를 감싸는 한 쌍의 before/after refix) 계측 지시 추가(`.sh`
   wrapper 호출).
-- `.claude/skills/acpd/aacp.sh` — `agent-stats-archive.py` 호출 직전
+- `.claude/skills/aacpd/aacp.sh` — `agent-stats-archive.py` 호출 직전
   `tools/log-cost-summary.py` 호출 추가. `tools/log-cost-summary.py`가
   없는 대상 repo(예: 샌드박스 테스트)에서도 깨지지 않도록 `deploy.sh`와
   같은 "있으면 실행, 없으면 스킵" 방식으로 존재 여부를 먼저 확인한다.
-- `.claude/skills/acpd/aacp.ps1` — 동일 훅을 PowerShell 쪽에도 추가
+- `.claude/skills/aacpd/aacp.ps1` — 동일 훅을 PowerShell 쪽에도 추가
   (`Test-Path`로 존재 확인 후 `uv run`).
-- `.claude/skills/acpd/SKILL.md` — 위 훅 반영해 문서 갱신.
+- `.claude/skills/aacpd/SKILL.md` — 위 훅 반영해 문서 갱신.
 - `regression-tests/verify-issue-49.sh` — 신규 회귀 스크립트(9개 스크립트
   × 4확장자 존재 확인, SKILL.md의 `.sh` wrapper 호출 단언 + 맨 `.py`
   직접 호출 0건 단언, 스크래치 픽스처로 wrapper 실동작 검증, aacp.sh
@@ -203,7 +203,7 @@ wrapper를 스크래치 픽스처에 직접 호출해 실측(sonnet)·null(minim
 파일에 존재함을 확인했다. 사용자가 보고한 재현 명령
 (`tools/log-cost-haiku.sh --dryrun . issue-49 "test"`)도 직접 재실행해
 에러 없이 JSON을 출력하고 파일을 건드리지 않음을 확인했다.
-`pyproject.toml`이 저장소 루트에 없어 acpd의 ruff/pyright/pytest
-게이트는 tdd2/acpd 규약에 따라 자동 skip(본 회귀 스크립트 자체가
+`pyproject.toml`이 저장소 루트에 없어 aacpd의 ruff/pyright/pytest
+게이트는 tdd2/aacpd 규약에 따라 자동 skip(본 회귀 스크립트 자체가
 독립적으로 검증 수행; `python3 -m py_compile tools/*.py`로 전체 컴파일
 클린 확인).

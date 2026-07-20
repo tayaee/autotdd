@@ -10,7 +10,7 @@
 
 **심각도**: 중간 (사용자 혼란, BUT 로직 오류는 아님)
 
-`check_preflight`가 `core.preflight("fix", repo)`를 호출하면 내부 검사 ⑦에서 `~/.claude/skills/{autotdd,tdd2,acpd}` 존재를 확인한다. 이후 `check_skills()`도 `~/.claude/skills/{autotdd,tdd2,acpd,tdd}`를 확인한다. 따라서 `autotdd`/`tdd2`/`acpd` 중 하나라도 없으면 **2건의 FAIL**이 출력된다:
+`check_preflight`가 `core.preflight("fix", repo)`를 호출하면 내부 검사 ⑦에서 `~/.claude/skills/{autotdd,tdd2,aacpd}` 존재를 확인한다. 이후 `check_skills()`도 `~/.claude/skills/{autotdd,tdd2,aacpd,tdd}`를 확인한다. 따라서 `autotdd`/`tdd2`/`aacpd` 중 하나라도 없으면 **2건의 FAIL**이 출력된다:
 
 ```
 FAIL preflight(fix)
@@ -21,13 +21,13 @@ FAIL 스킬 autotdd
 [조치] autotdd 설치 확인
 ```
 
-이는 issue-20.md의 요구사항 ⑦(`~/.claude/skills/{autotdd,tdd2,acpd,tdd}`)과 preflight의 내부 검사 ⑦이 의도치 않게 겹친 결과다. 설계 문서에는 "preflight 상위 집합"이라고만 정의되어 있어 이 중복이 명시적이지 않다.
+이는 issue-20.md의 요구사항 ⑦(`~/.claude/skills/{autotdd,tdd2,aacpd,tdd}`)과 preflight의 내부 검사 ⑦이 의도치 않게 겹친 결과다. 설계 문서에는 "preflight 상위 집합"이라고만 정의되어 있어 이 중복이 명시적이지 않다.
 
 ### 권장 조치
 
 두 가지 접근 중 하나:
 
-- **A)** `check_skills()`에서 `autotdd`/`tdd2`/`acpd`를 제외하고 `tdd`만 검사한다 — preflight가 이미 검사한 것은 다시 검사하지 않는다는 원칙.
+- **A)** `check_skills()`에서 `autotdd`/`tdd2`/`aacpd`를 제외하고 `tdd`만 검사한다 — preflight가 이미 검사한 것은 다시 검사하지 않는다는 원칙.
 - **B)** `check_preflight("fix")`가 실패했을 때, 그 하위 항목 ⑦의 실패 메시지를 기억해두었다가 `check_skills()`에서 같은 결함을 건너뛴다.
 
 A가 단순하다.

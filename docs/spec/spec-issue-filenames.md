@@ -1,7 +1,7 @@
 # spec: issues/ 파일명 규약 v3
 
 이 문서가 issues/ 파일명 규약의 **단일 정본**이다. `tdd2`·`autotdd`·
-`acpd`·`autotddreview`·autoqafix 엔진 등 모든 소비자는 이 규약을 따르며,
+`aacpd`·`autotddreviewfix`·autoqafix 엔진 등 모든 소비자는 이 규약을 따르며,
 각 SKILL.md의 파일명 서술은 이 문서의 요약이다. (issue-39에서 v2 확정,
 grill 세션 2026-07-12 합의 / v3는 2026-07-18 세션에서 전면 개정 —
 `__TYPE-`/`__STATE-` KEY-값 문법을 폐기하고, 발견용 리터럴 마커로 전환)
@@ -86,7 +86,7 @@ grill 세션 2026-07-12 합의 / v3는 2026-07-18 세션에서 전면 개정 —
 없는 **raw 에러 보고**다 — 사람이나 다른 에이전트가 분석하지 않은 채
 `/autotdd`가 그대로 구현을 시도하면 엉뚱한 수정을 밀어붙일 위험이 있다.
 
-그래서 `/autotdd`(및 `/autotddreview`)는 실행 시작 전에
+그래서 `/autotdd`(및 `/autotddreviewfix`)는 실행 시작 전에
 `issues/*__analysis-required*.md`가 하나라도 존재하는지 확인하고, 있으면
 `grill-with-docs` 스킬을 먼저 돌려 분석·계획을 채울지 사용자에게 물어야
 한다 (각 SKILL.md의 "analysis-required 게이트" 절 참조). 사용자가

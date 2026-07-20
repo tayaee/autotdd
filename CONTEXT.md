@@ -1,6 +1,6 @@
 # autosdlc
 
-issue 파일 기반 TDD 스킬(tdd2/acpd/autotdd)과 무인 자동 개발/수정 스위트
+issue 파일 기반 TDD 스킬(tdd2/aacpd/autotdd)과 무인 자동 개발/수정 스위트
 (autoqa/autofix/autodev/autoqafix)의 리포.
 
 ## Language
@@ -67,7 +67,7 @@ _Avoid_: 에러 로그, 블랙리스트
 _Avoid_: qwen.{bat,ps1,sh}, LLM CLI, 에이전트 바이너리
 
 **리뷰 사이클**:
-`autotddreview` 스킬이 issue 하나에 대해 도는 4단계 — 구현(coder) → 리뷰(reviewer,
+`autotddreviewfix` 스킬이 issue 하나에 대해 도는 4단계 — 구현(coder) → 리뷰(reviewer,
 병렬) → 수정 계획(planner) → 재수정(re-fix). coder·planner·재수정은 항상 **실행 세션**
 (스킬을 호출한 바로 그 모델·그 대화)이 인라인으로 담당하고, 리뷰어만 인자로 지정한다.
 coder를 바꾸는 방법은 플래그가 아니라 다른 모델의 세션에서 스킬을 실행하는 것이다.

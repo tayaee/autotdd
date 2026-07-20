@@ -48,7 +48,7 @@ ADR 0003(`~/git/harness-project/docs/adr/0003-autorevfix-wrapper-architecture.md
 - [ ] `/home/user1/git/harness-project/.local/bin/` 10 wrapper 모두 실행 가능
 - [ ] `grep MINIMAX_API_KEY .claude/skills/autorevfix/SKILL.md` 매치 0건
       (secrets-free 확인)
-- [ ] `bash .claude/skills/acpd/aacp.sh 35 "<summary>"`가 archive + commit +
+- [ ] `bash .claude/skills/aacpd/aacp.sh 35 "<summary>"`가 archive + commit +
       push까지 정상 완료
 
 ## 검증
@@ -63,7 +63,7 @@ ADR 0003(`~/git/harness-project/docs/adr/0003-autorevfix-wrapper-architecture.md
 
 - harness-project commit `d02ccea` (issue-3) — wrappers 10개 + ADR 0003 +
   test-wrappers.sh 추가됨
-- 본 repo의 자매 스킬들: `autotdd`, `tdd2`, `acpd`, `autofix`, `autodev`,
+- 본 repo의 자매 스킬들: `autotdd`, `tdd2`, `aacpd`, `autofix`, `autodev`,
   `autoqa`, `autoqafix` (모두 `.claude/skills/<name>/SKILL.md`)
 - 본 스킬은 자매들과 달리 스크립트가 아닌 **순수 트리거** (현재 세션의 Claude가
   4단계를 직접 호출). 모델 호출은 wrapper가 감당하므로 Claude 본 세션은

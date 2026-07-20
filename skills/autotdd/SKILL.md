@@ -1,14 +1,14 @@
 ---
 name: autotdd
-description: Fully-automatic mode — runs tdd2 then acpd for each issue, one issue completely finished (implement+verify+merge+push+deploy) before the next starts, never batching, never prompting mid-run. With no issue numbers, lists everything left in issues/ and asks once whether to run through all of it. Optionally runs each issue in its own throwaway git worktree (the `worktree` keyword) for isolation — still one issue at a time, each merged into main immediately before the next starts. Use when the user says "/autotdd", "autotdd #", or gives a list/range of issue numbers to fully implement and ship unattended.
+description: Fully-automatic mode — runs tdd2 then aacpd for each issue, one issue completely finished (implement+verify+merge+push+deploy) before the next starts, never batching, never prompting mid-run. With no issue numbers, lists everything left in issues/ and asks once whether to run through all of it. Optionally runs each issue in its own throwaway git worktree (the `worktree` keyword) for isolation — still one issue at a time, each merged into main immediately before the next starts. Use when the user says "/autotdd", "autotdd #", or gives a list/range of issue numbers to fully implement and ship unattended.
 ---
 
-# autotdd — tdd2, then acpd, per issue, fully automatic
+# autotdd — tdd2, then aacpd, per issue, fully automatic
 
 The name is literal: **tdd** (via `tdd2`) **+ auto**mating everything
-after it (`acpd`: archive, commit, push, deploy). Pure orchestration:
+after it (`aacpd`: archive, commit, push, deploy). Pure orchestration:
 no script of its own. It composes `tdd2` (implementation, stops at
-`git add`) and `acpd` (archive+commit+push+deploy), run back-to-back
+`git add`) and `aacpd` (archive+commit+push+deploy), run back-to-back
 for each issue number.
 
 **= implement (+verify+git add) + merge (archive+commit+push) + deploy to dev**
@@ -44,10 +44,10 @@ Once Matt Pocock's `tdd` skill and this package are both installed,
 `tdd2` is what `/tdd` *means* in a repo that tracks work as local
 `issues/issue-#.md` files — it's the same red→green→refactor
 discipline, just pointed at that local-file SDLC instead of a bare
-prompt. `/tdd # + /acpd #` and `/tdd2 # + /acpd #` do the same thing;
+prompt. `/tdd # + /aacpd #` and `/tdd2 # + /aacpd #` do the same thing;
 saying `tdd2` is just unambiguous about which flavor you mean. All
-three of `/tdd`, `/tdd2`, and `/acpd` can stop and ask the user
-something. `/autotdd` is the odd one out: it chains `tdd2` and `acpd`
+three of `/tdd`, `/tdd2`, and `/aacpd` can stop and ask the user
+something. `/autotdd` is the odd one out: it chains `tdd2` and `aacpd`
 per issue and is built to run **unattended** — see "The one rule that
 matters" below for exactly what that rules out.
 
@@ -197,7 +197,7 @@ never a number and never counts as scope.
 
 **"Worktree" means isolation, not concurrency.** Issues are still
 processed one at a time, in order, exactly like the default loop —
-`worktree` only changes *where* each issue's `tdd2`/`acpd` pair runs
+`worktree` only changes *where* each issue's `tdd2`/`aacpd` pair runs
 (a throwaway sibling checkout instead of the directory you're standing
 in). The payoff: your current checkout stays untouched while the run
 is in progress, so you can inspect `main` mid-run, or point a separate
@@ -226,9 +226,9 @@ treat every extracted number as a listed issue, in the order given.
 
 ## The one rule that matters
 
-> ⚠️ Never run all the `tdd2`s first and all the `acpd`s after. Each
+> ⚠️ Never run all the `tdd2`s first and all the `aacpd`s after. Each
 > issue must be **fully finished** — `tdd2 #` immediately followed by
-> `acpd #` — before touching the next issue number. And within a run,
+> `aacpd #` — before touching the next issue number. And within a run,
 > **never prompt** — not per-issue, not for UI verification (see the
 > exception noted in `tdd2`'s step 10), not for anything. The single
 > upfront "run through all N?" question (no-number case only) and the
@@ -245,19 +245,19 @@ treat every extracted number as a listed issue, in the order given.
 > **Note on worktree mode:** the identical rule applies — one issue
 > fully finished (through its `git merge --ff-only` into `main`) before
 > the next one starts. Worktree mode (below) only changes where each
-> iteration's `tdd2`+`acpd` pair physically runs; it never changes this
+> iteration's `tdd2`+`aacpd` pair physically runs; it never changes this
 > one-at-a-time, no-batching ordering.
 
 `autotdd 1 2 3` is:
 
 ```
-tdd2 1 → acpd 1 → tdd2 2 → acpd 2 → tdd2 3 → acpd 3
+tdd2 1 → aacpd 1 → tdd2 2 → aacpd 2 → tdd2 3 → aacpd 3
 ```
 
 **not**
 
 ```
-tdd2 1 → tdd2 2 → tdd2 3 → acpd 1 → acpd 2 → acpd 3
+tdd2 1 → tdd2 2 → tdd2 3 → aacpd 1 → aacpd 2 → aacpd 3
 ```
 
 Why: once an issue is pushed and deployed to dev, it's a clean
@@ -279,19 +279,19 @@ grep -q '\*\*구현 완료 일시\*\*: *(미정)' "$f"
 
 - Placeholder still `(미정)` (not implemented, or in-progress) →
   `tdd2 #` (implements + verifies + `git add`, stops there), then
-  `acpd #`.
+  `aacpd #`.
 - Already filled in (implemented earlier, never merged — e.g. a prior
-  `tdd2` run that stopped short of `acpd`) → skip straight to `acpd #`.
+  `tdd2` run that stopped short of `aacpd`) → skip straight to `aacpd #`.
 
 ```
 for # in <target list>:
     if no tag-less issues/issue-#*.md resolves (rule above):
         warn and skip #, continue to next
     if 구현 결과 already filled in:
-        acpd #
+        aacpd #
     else:
         tdd2 #      ← implement + verify + git add (stops there)
-        acpd #      ← archive + commit + push + deploy --env dev
+        aacpd #      ← archive + commit + push + deploy --env dev
     # is done only once the applicable step(s) above have completed
 ```
 
@@ -307,7 +307,7 @@ for # in <target list>:
 Triggered by the `worktree` keyword (see above). Same target-issue
 list, same one-at-a-time ordering, same "check state first" rule as
 the default loop — only the mechanics of each iteration differ.
-Neither `tdd2` nor `acpd` are modified for this: they run completely
+Neither `tdd2` nor `aacpd` are modified for this: they run completely
 unmodified, just with their cwd inside a throwaway worktree instead of
 the repo you're standing in.
 
@@ -324,7 +324,7 @@ For each issue `#` in the target list:
 1. **Check state first**, on `main`, same test as the default loop
    (`구현 완료 일시` still `(미정)`?). If it's already filled in
    (implemented earlier but never archived — nothing to isolate) → run
-   `acpd #` directly on `main`, no worktree involved, then move on to
+   `aacpd #` directly on `main`, no worktree involved, then move on to
    the next `#`.
 2. Otherwise, from `main` at its current tip:
 
@@ -332,8 +332,8 @@ For each issue `#` in the target list:
    git worktree add ../<repo-name>-issue-<#> -b issue-<#>
    ```
 
-3. Inside that worktree: `tdd2 #`, then `acpd #` — unmodified, exactly
-   as the default loop runs them. `acpd`'s own commit, push, and
+3. Inside that worktree: `tdd2 #`, then `aacpd #` — unmodified, exactly
+   as the default loop runs them. `aacpd`'s own commit, push, and
    `deploy --env dev` all happen on the `issue-<#>` branch here; that's
    fine, because step 2 guarantees `issue-<#>` never diverges from
    `main` except by this one issue's commit(s) — so whatever gets
@@ -357,7 +357,7 @@ For each issue `#` in the target list:
 
         - Resolved (rebase completes with no conflict markers left) →
           **re-run the same verification this issue already passed
-          once** (`acpd`'s five-check Python gate if `pyproject.toml`
+          once** (`aacpd`'s five-check Python gate if `pyproject.toml`
           exists at the repo root, otherwise whatever `tdd2` steps 5–9
           used) inside the worktree.
           - Passes → retry `git merge --ff-only issue-<#>` on `main`,

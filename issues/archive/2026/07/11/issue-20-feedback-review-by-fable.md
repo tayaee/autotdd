@@ -45,7 +45,7 @@
 
 | # | 출처 | 지적 | 수용 사유 |
 |---|---|---|---|
-| GF-1 | gemini ①, deepseek #1 | `check_preflight("fix")`와 `check_skills()`가 autotdd/tdd2/acpd 부재를 **이중 FAIL 계수** → exit code 부풀림 | 사실 확인. 단 스펙(①+⑦)이 둘 다 요구한 구조적 결과라 "실수"보다는 dedupe 개선으로 수용 |
+| GF-1 | gemini ①, deepseek #1 | `check_preflight("fix")`와 `check_skills()`가 autotdd/tdd2/aacpd 부재를 **이중 FAIL 계수** → exit code 부풀림 | 사실 확인. 단 스펙(①+⑦)이 둘 다 요구한 구조적 결과라 "실수"보다는 dedupe 개선으로 수용 |
 | GF-2 | gemini ②, minimax P2-1(3차) | usage 스크립트 중복 실행 — doctor가 직접 1회 + select-llm 내부(fetch_usage) 1회, 총 `uv` 직렬 8회 | select-llm.py:57–79 실측 확인. 성능 개선으로 수용 (기본 3래퍼 기준 콜드 수 초) |
 | GF-3 | deepseek #7 | `parse_wrapper_spec` 하나 때문에 `import autofix`(실행 엔진 전체) 전이 의존 | 타당. `autoqafix_core`로 이동이 정석 |
 | GF-4 | minimax P1-4(부분), deepseek #2, deepseek #10 | deploy glob(`deploy-to-*`)의 의도 명시 부재 + `deploy-to-<env>.sh` 감지 미테스트 | 코드는 옳다(아래 RJ-1 참조)는 것이 본 판정이나, 4개 리뷰 중 3개가 서로 다르게 오독한 것 자체가 주석 부재의 증거. 의도 주석 + verify 케이스 추가 수용. minimax의 "좁히기" 대안은 기각, "주석 명시" 대안만 수용 |
@@ -67,7 +67,7 @@
 | # | 출처 | 지적 | 반박 근거 (실측) |
 |---|---|---|---|
 | RJ-1 | qwen P1-1 | `deploy-to-*` glob은 "존재하지 않는 파일을 찾는 dead code" | **오판.** glob의 대상은 이 codebase가 아니라 **진단 대상 repo**다. 스펙(issue-20.md:18)의 `deploy-to-env.{sh,ps1,bat}`에서 "env"는 환경명 플레이스홀더(qwen 스스로 "실제 형식은 `deploy-to-<env>.sh`"라 인용하며 자가당착). 넓은 glob이 스펙 의도에 부합 |
-| RJ-2 | qwen P1-2 | `REQUIRED_SKILLS`의 `tdd` 추가가 "의도 불명확한 중복" | **오판.** issue-20.md:22 스펙 ⑦이 `{autotdd,tdd2,acpd,tdd}` 4종을 명시. preflight 3종은 issue-10의 좁은 정의이고 doctor의 4종은 스펙 그대로 |
+| RJ-2 | qwen P1-2 | `REQUIRED_SKILLS`의 `tdd` 추가가 "의도 불명확한 중복" | **오판.** issue-20.md:22 스펙 ⑦이 `{autotdd,tdd2,aacpd,tdd}` 4종을 명시. preflight 3종은 issue-10의 좁은 정의이고 doctor의 4종은 스펙 그대로 |
 | RJ-3 | qwen P1-3 | usage 서브프로세스에 "환경 변수 전파 누락" | **오판.** `subprocess.Popen`은 `env=None`(기본)일 때 부모 env를 상속. verify가 `PING_WRAPPER`를 상속만으로 전달하는 것이 실증 |
 | RJ-4 | qwen P1-4 | select-llm "exit code 무시는 false positive" | **오판.** exit 2는 "none" 정상 경로(issue-9 디자인, select-llm.py:161 명시)이고 출력 판정은 doctor.py:118 주석에 기록된 의도. exit 1류 오류는 stderr `[경고]`(select-llm.py:60–77)로 이미 노출 |
 | RJ-5 | qwen P2-2 | 커밋 메시지/이슈 기록의 `any(glob제너레이터)` 버그 언급이 혼란 | 구현 결과 기록이 이미 "…오판 **→ 수정**"으로 종결을 명시(issue-20.md:50–51). 커밋은 push 완료라 amend 불가. 코드도 정상 동작 |

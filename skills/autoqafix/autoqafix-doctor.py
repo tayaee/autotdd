@@ -36,7 +36,7 @@ import autoqafix_core as core
 SCRIPT_DIR = Path(__file__).resolve().parent
 WRAPPER_DEFAULT_DIR = SCRIPT_DIR / "wrappers"
 WRAPPERS_DEFAULT = "claudecli:paid,minimaxcli:paid,qwencli:local"
-REQUIRED_SKILLS = ("autotdd", "tdd2", "acpd", "tdd")
+REQUIRED_SKILLS = ("autotdd", "tdd2", "aacpd", "tdd")
 
 
 class Doctor:
@@ -202,14 +202,14 @@ def check_lock(d: Doctor, repo: Path) -> None:
 
 
 def check_skills(d: Doctor) -> None:
-    """⑦ ~/.claude/skills/{autotdd,tdd2,acpd,tdd} 존재.
+    """⑦ ~/.claude/skills/{autotdd,tdd2,aacpd,tdd} 존재.
 
-    preflight(fix)가 이미 {autotdd,tdd2,acpd} 부재를 보고하므로
+    preflight(fix)가 이미 {autotdd,tdd2,aacpd} 부재를 보고하므로
     중복 회피: 위 3종은 OK 줄만 출력하고 부재 시 silent (preflight에 위임),
     preflight와 겹치지 않는 tdd만 FAIL 계수. 4종 모두 정상일 때의
     `OK 스킬 <name>` 4줄 출력은 그대로 유지한다 (진단 리포트 가독성 보존).
     """
-    overlap = ("autotdd", "tdd2", "acpd")
+    overlap = ("autotdd", "tdd2", "aacpd")
     for skill in REQUIRED_SKILLS:
         present = (Path.home() / ".claude" / "skills" / skill).is_dir()
         if present:

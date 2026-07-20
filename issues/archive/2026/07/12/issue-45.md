@@ -27,7 +27,7 @@ agent-tier: any
 
 ## 요구사항
 
-1. **log-run 래퍼 신설**: `.claude/skills/acpd/defaults/log-run.sh`
+1. **log-run 래퍼 신설**: `.claude/skills/aacpd/defaults/log-run.sh`
    (bat/ps1 동반, 기존 defaults와 동일 3종 세트).
    사용법: `log-run.sh <이슈번호> <tool명> <실제 스크립트> [인자...]`
    - 실제 스크립트를 실행하고 stdout/stderr는 그대로 통과(투명 래퍼),
@@ -46,7 +46,7 @@ agent-tier: any
    `run-unit-tests`/`run-regression-tests`/red 단계 직접 pytest는
    **계측하지 않는다** (기록 자체를 안 함).
 3. **tdd2 SKILL.md 스펙 변경**:
-   - 시작 시 `git rev-parse HEAD`를 `<시작HEAD>`로 기록 (autotddreview
+   - 시작 시 `git rev-parse HEAD`를 `<시작HEAD>`로 기록 (autotddreviewfix
      Step 1과 동일 관행을 tdd2 자체로 내림).
    - 정적분석 3종 호출을 log-run 경유로 명시.
    - 구현 결과 갱신 시점에 summary 라인 append:
@@ -55,8 +55,8 @@ agent-tier: any
      — loc_added는 git에서 기계 산출(삭제·바이너리 제외).
 4. **파일명 규약 반영**: `docs/spec/spec-issue-filenames.md`의 TYPE
    enum에 `coder-stats` 추가.
-5. **아카이브 동선**: acpd 스펙에 `issue-N__TYPE-coder-stats.jsonl`을
-   이슈 파일과 함께 아카이브하도록 추가 (autotddreview Step 4의 TYPE
+5. **아카이브 동선**: aacpd 스펙에 `issue-N__TYPE-coder-stats.jsonl`을
+   이슈 파일과 함께 아카이브하도록 추가 (autotddreviewfix Step 4의 TYPE
    파일 아카이브 목록에도 포함).
 6. **스코어보드 coder 축**: `tools/reviewer-scoreboard.py` 확장 —
    coder-stats.jsonl을 라이브+아카이브 재귀 수집, coder(model)별:
@@ -77,7 +77,7 @@ agent-tier: any
 - [ ] tdd2 SKILL.md에 시작HEAD 기록·log-run 경유·summary append 명시,
       pytest/회귀는 계측 제외 명시
 - [ ] spec-issue-filenames.md TYPE enum에 coder-stats 존재
-- [ ] acpd·autotddreview 스펙에 coder-stats.jsonl 아카이브 동선 존재
+- [ ] aacpd·autotddreviewfix 스펙에 coder-stats.jsonl 아카이브 동선 존재
 - [ ] 스코어보드에 coder 섹션(defect 밀도/1000라인, syntax 별도,
       run 횟수 병기), `--json`·`--since` 동작
 - [ ] 단위 테스트 존재·통과, ruff+pyright 통과, 전체 회귀 PASS
@@ -96,11 +96,11 @@ agent-tier: any
 
 **구현 완료 일시**: 2026-07-12T00:00:00Z
 **변경 파일**:
-- `.claude/skills/acpd/defaults/log-run.sh` — 신규 (sh 버전; ruff/pyright 파싱, JSONL append, exit 전파, parse-failure → null)
-- `.claude/skills/acpd/defaults/log-run.ps1` — 신규 (PowerShell 포트, 동일 규칙)
-- `.claude/skills/acpd/defaults/log-run.bat` — 신규 (pwsh/powershell 디스패처)
+- `.claude/skills/aacpd/defaults/log-run.sh` — 신규 (sh 버전; ruff/pyright 파싱, JSONL append, exit 전파, parse-failure → null)
+- `.claude/skills/aacpd/defaults/log-run.ps1` — 신규 (PowerShell 포트, 동일 규칙)
+- `.claude/skills/aacpd/defaults/log-run.bat` — 신규 (pwsh/powershell 디스패처)
 - `.claude/skills/tdd2/SKILL.md` — Step 5에 log-run 경유·시작HEAD·pytest 비계측, Step 11에 summary 라인 append 스펙 추가
-- `.claude/skills/autotddreview/SKILL.md` — Step 4 done check·아카이브 목록에 `coder-stats.jsonl` 추가
+- `.claude/skills/autotddreviewfix/SKILL.md` — Step 4 done check·아카이브 목록에 `coder-stats.jsonl` 추가
 - `docs/spec/spec-issue-filenames.md` — TYPE enum에 `coder-stats` 추가, 산출물 예시 한 줄 추가
 - `tools/reviewer-scoreboard.py` — coder 섹션 (defect_density_per_kloc, syntax 별도, run 횟수, `--json`/`--since` 지원), collect_coders 함수 추가. `re` 미사용 — stdlib allowlist 호환
 - `tests/test_reviewer_scoreboard_coder.py` — 신규 9건 (집계·밀도·syntax 분리·run 횟수·since·손상 라인·고아 run·summary 필드 검증·다중 summary 누적)

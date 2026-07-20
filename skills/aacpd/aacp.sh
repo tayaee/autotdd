@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# acpd — Archive issue, git Add -u, Commit, Push, Deploy (dev only).
+# aacpd — Archive issue, git Add -u, Commit, Push, Deploy (dev only).
 #
 # Usage:
 #   aacp.sh <issue-number> <commit-summary...>   # process one issue, no prompts
@@ -9,7 +9,7 @@
 # implements — Archive, (git) Add, Commit, Push. The fifth step, Deploy, is
 # deliberately NOT this skill's own logic: each target repo is expected to
 # provide its own deploy entry point (see step 5 below). This file is
-# `.claude/skills/acpd/aacp.sh`; the deploy script it calls at the end is
+# `.claude/skills/aacpd/aacp.sh`; the deploy script it calls at the end is
 # `<target-repo>/deploy.sh` or `<target-repo>/deploy-to-env.sh` — a
 # different file this skill never generates.
 #
@@ -77,7 +77,7 @@ run_check() {
     echo "--- ${name} (project script) ---"
     "./${name}.sh"
   else
-    echo "--- ${name} (acpd default) ---"
+    echo "--- ${name} (aacpd default) ---"
     bash "$DEFAULTS_DIR/${name}.sh"
   fi
 }
@@ -113,7 +113,7 @@ shopt -u nullglob
 for tf in "${TYPE_FILES[@]}"; do
   # `__refix-plan.md`/`__agent-stats.json` 엔트리는 glob 메타문자가 없는
   # 리터럴 경로라 nullglob이 적용되지 않는다 — 파일이 실제로 없는 경우
-  # (예: review 사이클 없이 순수 tdd2+acpd만 거친 이슈)는 여기서 건너뛴다.
+  # (예: review 사이클 없이 순수 tdd2+aacpd만 거친 이슈)는 여기서 건너뛴다.
   [ -e "$tf" ] || continue
   case "$tf" in
     *__agent-stats.json)
@@ -156,4 +156,4 @@ else
   echo "Add one (deploy.sh or deploy-to-env.sh, accepting --env <env>) to enable it." >&2
 fi
 
-echo "✓ acpd complete: issue-${ISSUE_NUM} archived to ${ARCHIVE_DIR}/, committed, pushed, ${DEPLOY_STATUS}."
+echo "✓ aacpd complete: issue-${ISSUE_NUM} archived to ${ARCHIVE_DIR}/, committed, pushed, ${DEPLOY_STATUS}."

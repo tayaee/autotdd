@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# verify-issue-40.sh — autotddreview 리뷰어 프롬프트 4부 구조 검증
+# verify-issue-40.sh — autotddreviewfix 리뷰어 프롬프트 4부 구조 검증
 # ① 환경 사실(.python-version→pyproject.toml, 3.12 캡) ② 범위(OWASP, 스타일·타입
 # 보고 금지) ③ 증거 계약(3요소, 정밀도 우선) ④ 구조화 finding 포맷 + 셀프 리뷰
 # 동일 적용 + 첫 줄 모델명 유지를 SKILL.md에서 단언한다.
 set -u
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-SKILL="$REPO_ROOT/.claude/skills/autotddreview/SKILL.md"
+SKILL="$REPO_ROOT/.claude/skills/autotddreviewfix/SKILL.md"
 
 FAIL=0
 fail() { echo "FAIL: $1" >&2; FAIL=1; }

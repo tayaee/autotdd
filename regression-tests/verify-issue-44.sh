@@ -7,7 +7,7 @@
 set -u
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-SKILL="$REPO_ROOT/.claude/skills/autotddreview/SKILL.md"
+SKILL="$REPO_ROOT/.claude/skills/autotddreviewfix/SKILL.md"
 CLI="$REPO_ROOT/tools/reviewer-scoreboard.py"
 
 FAIL=0

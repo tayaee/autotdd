@@ -5,9 +5,9 @@
 set -u
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-SKILL_REVIEW="$REPO_ROOT/.claude/skills/autotddreview/SKILL.md"
+SKILL_REVIEW="$REPO_ROOT/.claude/skills/autotddreviewfix/SKILL.md"
 SKILL_TDD2="$REPO_ROOT/.claude/skills/tdd2/SKILL.md"
-GLOBAL_SKILL_REVIEW="$HOME/.claude/skills/autotddreview/SKILL.md"
+GLOBAL_SKILL_REVIEW="$HOME/.claude/skills/autotddreviewfix/SKILL.md"
 GLOBAL_SKILL_TDD2="$HOME/.claude/skills/tdd2/SKILL.md"
 SPEC="$REPO_ROOT/docs/spec/spec-issue-filenames.md"
 CLI="$REPO_ROOT/tools/reviewer-scoreboard.py"
@@ -43,9 +43,9 @@ done
 # agent-stats.json 스키마 필드명 존재 단언 (issue-47: coding-stats.json에서 이관)
 has "$SKILL_TDD2" "agent-stats.json" "tdd2: agent-stats.json 언급"
 has "$SKILL_TDD2" "static_analysis_failures" "tdd2: static_analysis_failures 스키마 포함"
-has "$SKILL_REVIEW" "agent-stats.json" "autotddreview: agent-stats.json 언급"
-has "$SKILL_REVIEW" "review_outcome" "autotddreview: review_outcome 스키마 포함"
-has "$SKILL_REVIEW" "refix_plans_written" "autotddreview: refix_plans_written 스키마 포함"
+has "$SKILL_REVIEW" "agent-stats.json" "autotddreviewfix: agent-stats.json 언급"
+has "$SKILL_REVIEW" "review_outcome" "autotddreviewfix: review_outcome 스키마 포함"
+has "$SKILL_REVIEW" "refix_plans_written" "autotddreviewfix: refix_plans_written 스키마 포함"
 
 # 2) spec-issue-filenames.md에 coder-stats/coding-stats 잔존 0건, agent-stats 존재 단언
 not_has "$SPEC" "coder-stats" "spec: coder-stats 제거"

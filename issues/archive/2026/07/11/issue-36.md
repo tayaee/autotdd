@@ -77,4 +77,4 @@ mattpocock/skills가 1.0→1.1로 올라가며 두 스킬이 개명되었다:
   전체 회귀 33/33 PASS.
 - **잔여 작업**: 리포 밖 로컬 환경 정리(승인됨) — `~/.claude/skills/`의
   to-issues/to-prd 실사본 및 `~/.agents/.skill-lock.json` 항목 삭제, 푸시 후
-  `npx skills update -g`로 전역 설치본 동기화. acpd 이후 별도 수행.
+  `npx skills update -g`로 전역 설치본 동기화. aacpd 이후 별도 수행.

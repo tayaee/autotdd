@@ -1,5 +1,5 @@
 #!/bin/bash
-# verify-issue-35.sh — contract tests for the autotddreview SKILL.md.
+# verify-issue-35.sh — contract tests for the autotddreviewfix SKILL.md.
 #
 # Static verification that:
 #   - SKILL.md exists with valid frontmatter (name, description)
@@ -14,7 +14,7 @@
 set -u
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-SKILL_PATH="$REPO_ROOT/.claude/skills/autotddreview/SKILL.md"
+SKILL_PATH="$REPO_ROOT/.claude/skills/autotddreviewfix/SKILL.md"
 WRAPPERS_DIR="/home/user1/git/harness-project/.local/bin"
 
 WRAPPERS_OUTER=(sonnet minimax qwen gemini fable)
@@ -72,7 +72,7 @@ if [ ! -f "$SKILL_PATH" ]; then
 fi
 
 # Frontmatter
-assert_grep '^name:\s+autotddreview\s*$' "$SKILL_PATH" "frontmatter name=autotddreview"
+assert_grep '^name:\s+autotddreviewfix\s*$' "$SKILL_PATH" "frontmatter name=autotddreviewfix"
 assert_grep '^description:' "$SKILL_PATH" "frontmatter description"
 
 # Secrets literal guard (defense in depth)

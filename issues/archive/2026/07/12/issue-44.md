@@ -21,7 +21,7 @@ agent-tier: any
 
 ## 요구사항
 
-1. **`model` 필드 추가** (`.claude/skills/autotddreview/SKILL.md` Step 3-7):
+1. **`model` 필드 추가** (`.claude/skills/autotddreviewfix/SKILL.md` Step 3-7):
    review-stats JSON의 `reviewers` 각 항목에 `model` 필드를 필수로 추가 —
    플래너가 해당 리뷰 파일 **첫 줄의 버전 포함 모델명**을 그대로 전사한다.
    키는 base명 유지(스코어보드 집계 단위 불변). 첫 줄에서 모델명을 얻지
@@ -55,7 +55,7 @@ agent-tier: any
 
 **구현 완료 일시**: 2026-07-12T00:00:00Z
 **변경 파일**:
-- `.claude/skills/autotddreview/SKILL.md` — Step 3-5에 중복 finding 전원 크레딧 규칙 추가, Step 3-7의 reviewers 필수 필드에 `model` 추가 + 첫 줄 전사·unknown 폴백·침묵 금지 명시
+- `.claude/skills/autotddreviewfix/SKILL.md` — Step 3-5에 중복 finding 전원 크레딧 규칙 추가, Step 3-7의 reviewers 필수 필드에 `model` 추가 + 첫 줄 전사·unknown 폴백·침묵 금지 명시
 - `tests/test_reviewer_scoreboard.py` — `model` 필드가 집계에 영향 없음을 고정하는 단위 테스트 2건 추가
 - `regression-tests/verify-issue-44.sh` — 신규. SKILL.md grep + model 필드 들/없는 픽스처로 집계 불변 단언 + 단위 테스트 게이트
 

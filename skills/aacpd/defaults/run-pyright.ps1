@@ -1,4 +1,4 @@
-# acpd default -- used only when the target project has no
+# aacpd default -- used only when the target project has no
 # run-pyright.ps1 of its own. Assumes CWD is already the target repo root.
 # Quick pass: type-checks src/ only. See run-pyright-full.ps1 for the whole
 # project.

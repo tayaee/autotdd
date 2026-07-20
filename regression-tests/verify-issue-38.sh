@@ -1,26 +1,26 @@
 #!/usr/bin/env bash
-# Verifies issue-38: 구 스킬명 → autotddreview 개명 + 위치 인자 문법·인라인 역할 단순화
+# Verifies issue-38: 구 스킬명 → autotddreviewfix 개명 + 위치 인자 문법·인라인 역할 단순화
 set -uo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-SKILL_PATH="$REPO_ROOT/.claude/skills/autotddreview/SKILL.md"
+SKILL_PATH="$REPO_ROOT/.claude/skills/autotddreviewfix/SKILL.md"
 HARNESS_DIR="/home/user1/git/harness-project"
 
 FAIL=0
 fail() { echo "FAIL: $1" >&2; FAIL=1; }
 pass() { echo "PASS: $1"; }
 
-# ----- 1. autotddreview/SKILL.md 존재 및 name 단언 -----
+# ----- 1. autotddreviewfix/SKILL.md 존재 및 name 단언 -----
 if [ -f "$SKILL_PATH" ]; then
     pass "SKILL.md 존재함"
 else
     fail "SKILL.md가 $SKILL_PATH 에 존재하지 않음"
 fi
 
-if grep -q 'name:[[:space:]]*autotddreview' "$SKILL_PATH"; then
-    pass "name: autotddreview 설정됨"
+if grep -q 'name:[[:space:]]*autotddreviewfix' "$SKILL_PATH"; then
+    pass "name: autotddreviewfix 설정됨"
 else
-    fail "SKILL.md에 'name: autotddreview'가 없음"
+    fail "SKILL.md에 'name: autotddreviewfix'가 없음"
 fi
 
 # ----- 2. 옛 플래그 문자열 부재 -----

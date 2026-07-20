@@ -5,7 +5,7 @@ agent-tier: local-ok
 
 issue-20 리뷰 종합 판정(`issue-20-feedback-review-by-fable.md` G1,
 원 지적: gemini ①, deepseek #1). doctor의 `check_preflight("fix")`가
-내부에서 `~/.claude/skills/{autotdd,tdd2,acpd}` 부재를 FAIL로 계수하고,
+내부에서 `~/.claude/skills/{autotdd,tdd2,aacpd}` 부재를 FAIL로 계수하고,
 뒤이은 `check_skills()`가 같은 3종(+`tdd`)을 다시 검사한다. 스킬 하나가
 없으면 동일 결함이 **FAIL 2건으로 이중 계수**되어 exit code가 실제 결함
 수보다 부풀려진다. (참고: doctor가 `tdd`까지 4종을 보는 것 자체는
@@ -43,7 +43,7 @@ issue-20 스펙 ⑦의 명시 요구 — 축소 금지.)
 - **계획과 차이**:
   - 리뷰 합의 A안 채택: `check_skills()`는 preflight가 검사하지 않는
     `tdd`만 FAIL 계수 대상으로 하고, preflight와 겹치는
-    `{autotdd,tdd2,acpd}` 3종은 OK 줄만 출력하고 부재 시 silent
+    `{autotdd,tdd2,aacpd}` 3종은 OK 줄만 출력하고 부재 시 silent
     (preflight에 위임). 4종 모두 정상일 때의 `OK 스킬 <name>` 4줄
     출력은 유지.
   - 부수 정리: `autoqafix-doctor.py`의 미사용 `import socket` 제거

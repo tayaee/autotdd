@@ -19,7 +19,7 @@ preflight(issue-10)의 상위 집합이다.
    존재하는가 — 이 파일은 대상 repo가 준비하는 것이며 스킬은 절대 생성하지
    않는다(없으면 FAIL이 아닌 `WARN — deploy 스크립트 없음, 파일이 없으므로
    배포는 생략됩니다` 출력), ⑥ 뮤텍스 잠금이 현재
-   잡혀 있지 않은가, ⑦ `~/.claude/skills/{autotdd,tdd2,acpd,tdd}` 존재
+   잡혀 있지 않은가, ⑦ `~/.claude/skills/{autotdd,tdd2,aacpd,tdd}` 존재
 3. `--ping` 플래그: 후보 래퍼의 `ping-<래퍼명>`도 실행(크레딧 소모 경고를
    먼저 출력하고 진행). 기본은 실행하지 않음
 4. exit code = FAIL 항목 수 (WARN은 세지 않음)

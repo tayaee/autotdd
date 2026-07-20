@@ -5,7 +5,7 @@ set -u
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SPEC="$REPO_ROOT/docs/spec/spec-issue-filenames.md"
-SKILL="$REPO_ROOT/.claude/skills/autotddreview/SKILL.md"
+SKILL="$REPO_ROOT/.claude/skills/autotddreviewfix/SKILL.md"
 SCRIPT="$REPO_ROOT/tools/derive_fixing_slug.py"
 TEST="$REPO_ROOT/tests/test_derive_fixing_slug.py"
 

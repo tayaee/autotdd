@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# verify-issue-42.sh — autotddreview 리뷰 범위 고정 검증: Step 1 범위 캡처
+# verify-issue-42.sh — autotddreviewfix 리뷰 범위 고정 검증: Step 1 범위 캡처
 # (시작 HEAD·재개 역추적·worktree), Step 2 프롬프트 범위 주입, 범위 밖 제한,
 # 폴백(침묵 금지)을 SKILL.md에서 단언한다.
 set -u
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-SKILL="$REPO_ROOT/.claude/skills/autotddreview/SKILL.md"
+SKILL="$REPO_ROOT/.claude/skills/autotddreviewfix/SKILL.md"
 
 FAIL=0
 fail() { echo "FAIL: $1" >&2; FAIL=1; }

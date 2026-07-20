@@ -3,14 +3,14 @@ agent-tier: any
 
 ## 배경
 
-grill 세션(2026-07-12, ai-md 리포에서 autotddreview 실행 중 파생) 합의.
+grill 세션(2026-07-12, ai-md 리포에서 autotddreviewfix 실행 중 파생) 합의.
 issue-45가 coder 축 정량화(log-run.sh + `issue-N__TYPE-coder-stats.jsonl`
 append-only 로그 + 스코어보드 coder 섹션)를 이미 구현했으나, 다음 두
 문제가 드러났다:
 
 1. **배포 구멍**: issue-45의 tdd2 SKILL.md 텍스트 변경(Step 5/11의
    coder-stats 계측 서술)은 전역 스킬(`~/.agents/skills`)에 반영됐지만,
-   그 서술이 참조하는 `log-run.sh` 스크립트 자체와 autotddreview의
+   그 서술이 참조하는 `log-run.sh` 스크립트 자체와 autotddreviewfix의
    아카이브 목록 갱신은 전역에 배포되지 않았다. 즉 이 리포 밖(예: ai-md)
    에서 `/tdd2`가 Python 프로젝트를 다루면 존재하지 않는 `log-run.sh`를
    참조하는 죽은 스펙이 된다.
@@ -86,7 +86,7 @@ issue-45 (대체 대상 — log-run.sh/coder-stats.jsonl 폐기).
   (위 스키마). 파일이 이미 존재하면(드문 재실행 케이스) `mvp` 섹션만
   덮어쓰고 `review_outcome`이 있으면 보존한다.
 
-### 3. `autotddreview` SKILL.md 수정 (2차 기록 지점)
+### 3. `autotddreviewfix` SKILL.md 수정 (2차 기록 지점)
 
 - Step 3(플래너)이 must-fix/good-to-fix 분류를 마친 직후 — 즉
   `review-stats.json`을 쓰는 바로 그 시점에, 이미 계산된 값(추가 리뷰
@@ -103,9 +103,9 @@ issue-45 (대체 대상 — log-run.sh/coder-stats.jsonl 폐기).
 
 ### 4. issue-45 잔재 제거
 
-- `.claude/skills/acpd/defaults/log-run.sh`(+`.bat`/`.ps1`) 삭제 — 더 이상
+- `.claude/skills/aacpd/defaults/log-run.sh`(+`.bat`/`.ps1`) 삭제 — 더 이상
   아무 스텝도 호출하지 않는 죽은 스크립트가 되므로.
-- `tdd2`/`autotddreview` SKILL.md에서 `log-run.sh`/`coder-stats.jsonl`
+- `tdd2`/`autotddreviewfix` SKILL.md에서 `log-run.sh`/`coder-stats.jsonl`
   언급을 전부 제거(치환이 아니라 삭제 — 위 1~3항이 그 자리를 대신함).
 
 ### 5. `tools/reviewer-scoreboard.py` (issue-43/45) coder 섹션 갱신
@@ -133,7 +133,7 @@ issue-45 (대체 대상 — log-run.sh/coder-stats.jsonl 폐기).
       `coding-stats` 추가 + 예시 줄 교체
 - [ ] `tdd2` SKILL.md: log-run.sh 언급 0건, Step 5에 자체 카운팅 서술,
       Step 11에 coding-stats.json 최초 생성(스키마·필드) 서술
-- [ ] `autotddreview` SKILL.md: Step 3에 coding-stats.json
+- [ ] `autotddreviewfix` SKILL.md: Step 3에 coding-stats.json
       read-modify-write(review_outcome 병합) 서술, Step 4 done-check·
       아카이브 목록에 coding-stats.json 포함
 - [ ] `log-run.sh`/`.bat`/`.ps1` 파일 삭제 확인
@@ -163,9 +163,9 @@ issue-45 (대체 대상 — log-run.sh/coder-stats.jsonl 폐기).
 - `docs/spec/spec-issue-filenames.md` — TYPE enum에 `coding-stats` 추가, `coder-stats` 제거 및 예시 교체
 - `.claude/skills/tdd2/SKILL.md` — log-run.sh 제거, 자체 카운터 지시 및 `coding-stats.json` 생성 스펙 추가
 - `/home/user1/.claude/skills/tdd2/SKILL.md` — 전역 스킬 동기화
-- `.claude/skills/autotddreview/SKILL.md` — `coding-stats.json` 병합 기록 및 아카이브 스펙 반영
-- `/home/user1/.claude/skills/autotddreview/SKILL.md` — 전역 스킬 동기화
-- `.claude/skills/acpd/defaults/log-run.sh`, `.bat`, `.ps1` — 잔재 파일 삭제
+- `.claude/skills/autotddreviewfix/SKILL.md` — `coding-stats.json` 병합 기록 및 아카이브 스펙 반영
+- `/home/user1/.claude/skills/autotddreviewfix/SKILL.md` — 전역 스킬 동기화
+- `.claude/skills/aacpd/defaults/log-run.sh`, `.bat`, `.ps1` — 잔재 파일 삭제
 - `tools/reviewer-scoreboard.py` — `coding-stats.json` 기반의 새로운 집계 및 밀도 성분(정적분석/리뷰) 분리 계산 구현
 - `tests/test_reviewer_scoreboard_coder.py` — 새 스키마 및 옵션에 맞추어 단위 테스트 갱신
 - `regression-tests/verify-issue-45.sh` — 폐기 및 우회 처리

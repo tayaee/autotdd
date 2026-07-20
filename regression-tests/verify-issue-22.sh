@@ -9,13 +9,13 @@
 #   3. tdd2 SKILL.md has verify-<stream> placeholder in path guidance
 #
 # Plus issue-body requirement: aacp.sh also generalized to recognize both
-# streams (the auxiliary script that lives next to acpd SKILL.md).
+# streams (the auxiliary script that lives next to aacpd SKILL.md).
 
 set -u
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 SKILL_DIR="$REPO_ROOT/.claude/skills"
-SKILLS=(tdd2 autotdd acpd)
+SKILLS=(tdd2 autotdd aacpd)
 
 pass=0
 fail=0
@@ -48,7 +48,7 @@ done
 assert_in_skill "tdd2" 'verify-<' 'verify-<stream> placeholder in path guidance'
 
 # Body requirement: aacp.sh recognizes both streams
-AACP="$SKILL_DIR/acpd/aacp.sh"
+AACP="$SKILL_DIR/aacpd/aacp.sh"
 if grep -qE -e 'autofix-' "$AACP" 2>/dev/null; then
     echo "[PASS] aacp.sh: autofix- stream recognized"
     pass=$((pass+1))

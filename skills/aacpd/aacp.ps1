@@ -1,4 +1,4 @@
-# acpd -- Archive issue, git Add -u, Commit, Push, Deploy (dev only).
+# aacpd -- Archive issue, git Add -u, Commit, Push, Deploy (dev only).
 #
 # Usage:
 #   aacp.ps1 <issue-number> <commit-summary...>   # process one issue, no prompts
@@ -13,7 +13,7 @@
 # implements -- Archive, (git) Add, Commit, Push. The fifth step, Deploy, is
 # deliberately NOT this skill's own logic: each target repo is expected to
 # provide its own deploy entry point (see step 5 below). This file is
-# `.claude/skills/acpd/aacp.ps1`; the deploy script it calls at the end is
+# `.claude/skills/aacpd/aacp.ps1`; the deploy script it calls at the end is
 # `<target-repo>/deploy.ps1` or `<target-repo>/deploy-to-env.ps1` -- a
 # different file this skill never generates.
 
@@ -69,7 +69,7 @@ function Invoke-Check {
         Write-Host "--- $Name (project script) ---"
         & $projectScript
     } else {
-        Write-Host "--- $Name (acpd default) ---"
+        Write-Host "--- $Name (aacpd default) ---"
         & (Join-Path $DefaultsDir "$Name.ps1")
     }
     if ($LASTEXITCODE -ne 0) {
@@ -145,4 +145,4 @@ if (Test-Path "deploy.ps1" -PathType Leaf) {
     Write-Warning "Add one (deploy.ps1 or deploy-to-env.ps1, accepting --env <env>) to enable it."
 }
 
-Write-Host "✓ acpd complete: issue-$IssueNum archived to $ArchiveDir/, committed, pushed, $DeployStatus."
+Write-Host "✓ aacpd complete: issue-$IssueNum archived to $ArchiveDir/, committed, pushed, $DeployStatus."

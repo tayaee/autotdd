@@ -81,11 +81,11 @@ issue-21__TYPE-refix-plan.md              산출물: 리뷰 종합 수정계획
    가드 서술 추가. bash 열거 루프 예시도 새 규칙으로 갱신.
 3. **autotdd SKILL.md**: 동일 갱신 (열거 루프, done-check grep 대상 경로가
    슬러그 있는 파일에도 동작하도록).
-4. **autotddreview SKILL.md**: 리뷰 파일명 `issue-N__TYPE-code-review__BY-<base>.md`
+4. **autotddreviewfix SKILL.md**: 리뷰 파일명 `issue-N__TYPE-code-review__BY-<base>.md`
    (셀프 리뷰는 `__BY-self`), 플래너 산출 `issue-N__TYPE-refix-plan.md`
    (feedback-review.md 대체), Step 2~4 done-check·아카이브 glob을 새
    파일명으로 갱신.
-5. **acpd SKILL.md**: 파일명 서술 갱신 + 아카이빙은 파일명 그대로 `git mv`
+5. **aacpd SKILL.md**: 파일명 서술 갱신 + 아카이빙은 파일명 그대로 `git mv`
    사용 명기 (이력 추적 `git log --follow` 보존).
 6. **autoqafix 실행 코드**: `error-to-autofix.py`, `autofix.py`의
    구 접미사 생성·판정 로직을 `__STATE-agent-failed` 등 태그로 교체.
@@ -101,7 +101,7 @@ issue-21__TYPE-refix-plan.md              산출물: 리뷰 종합 수정계획
 
 - [ ] `docs/spec/spec-issue-filenames.md` 존재 — 문법·3태그·판정 규칙·가드·
       예시 포함
-- [ ] tdd2/autotdd/acpd/autotddreview SKILL.md에서 아카이브 인용 제외
+- [ ] tdd2/autotdd/aacpd/autotddreviewfix SKILL.md에서 아카이브 인용 제외
       `-later.md`/`-manual.md`/`-agent-failed.md`/`feedback-review.md`/
       `code-review-by-` 구 문자열 0건
 - [ ] 위 4개 SKILL.md에 `__TYPE-`/`__STATE-`/`__BY-` 서술 존재
@@ -126,8 +126,8 @@ issue-21__TYPE-refix-plan.md              산출물: 리뷰 종합 수정계획
   - `docs/spec/spec-issue-filenames.md` (신규 — 규약 v2 단일 정본)
   - `.claude/skills/tdd2/SKILL.md` (Stream conventions·Argument parsing·열거 루프 v2 교체)
   - `.claude/skills/autotdd/SKILL.md` (Stream conventions·목록·상태 확인 v2 교체)
-  - `.claude/skills/acpd/SKILL.md` (아카이브 단일 규약+git mv 명기, pending 판정 v2)
-  - `.claude/skills/autotddreview/SKILL.md` (리뷰 산출물 `__TYPE-code-review__BY-*`/`__TYPE-refix-plan`, done-check·아카이브 glob 갱신)
+  - `.claude/skills/aacpd/SKILL.md` (아카이브 단일 규약+git mv 명기, pending 판정 v2)
+  - `.claude/skills/autotddreviewfix/SKILL.md` (리뷰 산출물 `__TYPE-code-review__BY-*`/`__TYPE-refix-plan`, done-check·아카이브 glob 갱신)
   - `.claude/skills/autoqafix/autofix.py` (STATE 태그 열거·rename, LegacyFilenameError 가드)
   - `.claude/skills/autoqafix/error-to-autofix.py` (`__STATE-manual` rename·커밋 접두사)
   - `docs/SETUP-autoqafix.md`, `docs/autoqafix-design.md` (상태 태그 서술)

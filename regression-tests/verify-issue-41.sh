@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# verify-issue-41.sh — autotddreview 플래너 이중 게이트 + 파생 이슈 생성·파킹 +
+# verify-issue-41.sh — autotddreviewfix 플래너 이중 게이트 + 파생 이슈 생성·파킹 +
 # review-stats JSON 기록 검증 (SKILL.md 정적 단언)
 set -u
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-SKILL="$REPO_ROOT/.claude/skills/autotddreview/SKILL.md"
+SKILL="$REPO_ROOT/.claude/skills/autotddreviewfix/SKILL.md"
 
 FAIL=0
 fail() { echo "FAIL: $1" >&2; FAIL=1; }

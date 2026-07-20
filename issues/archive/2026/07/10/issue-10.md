@@ -14,7 +14,7 @@ agent-tier: paid-only
      검사 항목: ① cwd가 git repo 루트(`git rev-parse --show-toplevel` == cwd),
      ② `issues/` 존재, ③ role이 qa면 `logs/` 존재, ④ `uv` PATH 존재,
      ⑤ `git config user.name`/`user.email` 설정됨, ⑥ `git ls-remote origin`
-     30초 내 성공, ⑦ role이 fix/dev면 `~/.claude/skills/{autotdd,tdd2,acpd}` 존재
+     30초 내 성공, ⑦ role이 fix/dev면 `~/.claude/skills/{autotdd,tdd2,aacpd}` 존재
    - `acquire_lock(role, repo) -> bool` / `release_lock(repo)`:
      `<repo>/.git/autoqafix.lock`에 `host=`,`pid=`,`role=`,`start=`(ISO8601) 기록.
      잠금 존재 시: 같은 호스트면 PID 생존 확인, 죽었으면 회수; 시작 후
