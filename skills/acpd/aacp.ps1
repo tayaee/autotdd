@@ -104,6 +104,11 @@ $TypeFiles += Get-ChildItem -Path "issues" -Filter "issue-$IssueNum`__refix-plan
 $TypeFiles += Get-ChildItem -Path "issues" -Filter "issue-$IssueNum`__agent-stats.json" -File -ErrorAction SilentlyContinue
 foreach ($tf in $TypeFiles) {
     if ($tf.Name -like "*__agent-stats.json") {
+        $LogCostSummary = Join-Path $RepoRoot "tools/log-cost-summary.py"
+        if (Test-Path $LogCostSummary) {
+            uv run $LogCostSummary $RepoRoot "issue-$IssueNum"
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+        }
         uv run (Join-Path $DefaultsDir "agent-stats-archive.py") $RepoRoot "issue-$IssueNum"
         if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     }

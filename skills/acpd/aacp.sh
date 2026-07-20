@@ -111,8 +111,15 @@ TYPE_FILES=(
 )
 shopt -u nullglob
 for tf in "${TYPE_FILES[@]}"; do
+  # `__refix-plan.md`/`__agent-stats.json` 엔트리는 glob 메타문자가 없는
+  # 리터럴 경로라 nullglob이 적용되지 않는다 — 파일이 실제로 없는 경우
+  # (예: review 사이클 없이 순수 tdd2+acpd만 거친 이슈)는 여기서 건너뛴다.
+  [ -e "$tf" ] || continue
   case "$tf" in
     *__agent-stats.json)
+      if [ -f "$REPO_ROOT/tools/log-cost-summary.py" ]; then
+        uv run "$REPO_ROOT/tools/log-cost-summary.py" "$REPO_ROOT" "${STREAM}-${N}"
+      fi
       uv run "$DEFAULTS_DIR/agent-stats-archive.py" "$REPO_ROOT" "${STREAM}-${N}"
       ;;
   esac
