@@ -14,7 +14,7 @@
 # deliberately NOT this skill's own logic: each target repo is expected to
 # provide its own deploy entry point (see step 5 below). This file is
 # `.claude/skills/aacpd/aacp.ps1`; the deploy script it calls at the end is
-# `<target-repo>/deploy.ps1` or `<target-repo>/deploy-to-env.ps1` -- a
+# `<target-repo>/deploy-to-dev.ps1` or `<target-repo>/deploy.ps1` -- a
 # different file this skill never generates.
 
 $ErrorActionPreference = "Stop"
@@ -128,21 +128,22 @@ git push
 # 6. Deploy -- dev only, ever. This is the ONE step this skill does not
 # implement itself: it's each target repo's own responsibility to provide
 # a deploy entry point. Resolution order:
-#   - .\deploy.ps1 exists  -> run it as `deploy.ps1 --env dev`
-#   - else .\deploy-to-env.ps1 exists -> run it as `deploy-to-env.ps1 --env dev`
+#   - .\deploy-to-dev.ps1 exists -> run it with no arguments (already
+#     env-specific, takes no --env flag)
+#   - else .\deploy.ps1 exists -> run it as `deploy.ps1 --env dev`
 #   - else -> no deploy script yet; skip (not a failure) and say so.
-$DeployStatus = "no deploy.ps1 or deploy-to-env.ps1 found -- deploy skipped"
-if (Test-Path "deploy.ps1" -PathType Leaf) {
+$DeployStatus = "no deploy-to-dev.ps1 or deploy.ps1 found -- deploy skipped"
+if (Test-Path "deploy-to-dev.ps1" -PathType Leaf) {
+    & ".\deploy-to-dev.ps1"
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    $DeployStatus = "deploy-to-dev.ps1 run"
+} elseif (Test-Path "deploy.ps1" -PathType Leaf) {
     & ".\deploy.ps1" --env dev
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     $DeployStatus = "deploy.ps1 --env dev run"
-} elseif (Test-Path "deploy-to-env.ps1" -PathType Leaf) {
-    & ".\deploy-to-env.ps1" --env dev
-    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-    $DeployStatus = "deploy-to-env.ps1 --env dev run"
 } else {
-    Write-Warning "this project has no deploy.ps1 or deploy-to-env.ps1 -- skipping deploy."
-    Write-Warning "Add one (deploy.ps1 or deploy-to-env.ps1, accepting --env <env>) to enable it."
+    Write-Warning "this project has no deploy-to-dev.ps1 or deploy.ps1 -- skipping deploy."
+    Write-Warning "Add one (deploy-to-dev.ps1, or deploy.ps1 accepting --env <env>) to enable it."
 }
 
 Write-Host "✓ aacpd complete: issue-$IssueNum archived to $ArchiveDir/, committed, pushed, $DeployStatus."

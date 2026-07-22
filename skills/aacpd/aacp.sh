@@ -10,7 +10,7 @@
 # deliberately NOT this skill's own logic: each target repo is expected to
 # provide its own deploy entry point (see step 5 below). This file is
 # `.claude/skills/aacpd/aacp.sh`; the deploy script it calls at the end is
-# `<target-repo>/deploy.sh` or `<target-repo>/deploy-to-env.sh` — a
+# `<target-repo>/deploy-to-dev.sh` or `<target-repo>/deploy.sh` — a
 # different file this skill never generates.
 #
 # Preconditions: run from inside the target repo (any subdirectory). Code
@@ -141,19 +141,20 @@ git push
 # 6. Deploy — dev only, ever. This is the ONE step this skill does not
 # implement itself: it's each target repo's own responsibility to provide
 # a deploy entry point. Resolution order:
-#   - ./deploy.sh exists  -> run it as `deploy.sh --env dev`
-#   - else ./deploy-to-env.sh exists -> run it as `deploy-to-env.sh --env dev`
+#   - ./deploy-to-dev.sh exists -> run it with no arguments (already
+#     env-specific, takes no --env flag)
+#   - else ./deploy.sh exists -> run it as `deploy.sh --env dev`
 #   - else -> no deploy script yet; skip (not a failure) and say so.
-DEPLOY_STATUS="no deploy.sh or deploy-to-env.sh found — deploy skipped"
-if [ -f deploy.sh ]; then
+DEPLOY_STATUS="no deploy-to-dev.sh or deploy.sh found — deploy skipped"
+if [ -f deploy-to-dev.sh ]; then
+  bash deploy-to-dev.sh
+  DEPLOY_STATUS="deploy-to-dev.sh run"
+elif [ -f deploy.sh ]; then
   bash deploy.sh --env dev
   DEPLOY_STATUS="deploy.sh --env dev run"
-elif [ -f deploy-to-env.sh ]; then
-  bash deploy-to-env.sh --env dev
-  DEPLOY_STATUS="deploy-to-env.sh --env dev run"
 else
-  echo "NOTE: this project has no deploy.sh or deploy-to-env.sh — skipping deploy." >&2
-  echo "Add one (deploy.sh or deploy-to-env.sh, accepting --env <env>) to enable it." >&2
+  echo "NOTE: this project has no deploy-to-dev.sh or deploy.sh — skipping deploy." >&2
+  echo "Add one (deploy-to-dev.sh, or deploy.sh accepting --env <env>) to enable it." >&2
 fi
 
 echo "✓ aacpd complete: issue-${ISSUE_NUM} archived to ${ARCHIVE_DIR}/, committed, pushed, ${DEPLOY_STATUS}."

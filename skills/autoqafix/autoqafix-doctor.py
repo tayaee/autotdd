@@ -152,12 +152,13 @@ def check_deploy(d: Doctor, repo: Path) -> None:
     """⑤ deploy 스크립트 존재 — 부재는 FAIL이 아닌 WARN (대상 repo 소관,
     이 도구는 절대 생성하지 않는다).
 
-    glob `deploy-to-*{ext}` 의도: 스펙의 `deploy-to-env`는 환경명 플레이스홀더
-    패턴이며, 여기서 `env`는 실제 환경명(dev/staging/prod 등)을 의미한다.
-    따라서 이 검사는 **진단 대상 repo** 안에서
-    `deploy-to-<env>.{sh,ps1,bat}` 형태의 파일을 감지하는 것이 올바른 구현이다.
-    glob을 `deploy-to-dev.sh` 같은 고정 이름으로 좁히지 말 것 — 그렇게 하면
-    dev 외 환경에서 정상적인 repo가 잘못 WARN 처리된다.
+    glob `deploy-to-*{ext}` 의도: `aacpd`가 실제로 찾는 파일명은
+    `deploy-to-<env>.{sh,ps1,bat}`(예: `deploy-to-dev.sh`)이며, 여기서
+    `<env>`는 실제 환경명(dev/staging/prod 등)을 의미한다. 따라서 이
+    검사는 **진단 대상 repo** 안에서 `deploy-to-<env>.{sh,ps1,bat}` 형태의
+    파일을 감지하는 것이 올바른 구현이다. glob을 `deploy-to-dev.sh` 같은
+    고정 이름으로 좁히지 말 것 — 그렇게 하면 dev 외 환경에서 정상적인
+    repo가 잘못 WARN 처리된다.
     """
     exts = (".sh", ".ps1", ".bat")
     # 위 docstring의 glob 정책 그대로: 환경명 플레이스홀더 패턴 유지.

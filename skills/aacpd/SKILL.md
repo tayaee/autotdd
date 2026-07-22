@@ -55,7 +55,7 @@ They live in different places:
 | | Path | What it is |
 |---|---|---|
 | This skill's script | `.claude/skills/aacpd/aacp.{sh,ps1,bat}` | What you invoke to run the whole archive→add→commit→push→deploy pipeline |
-| Target repo's script (project-provided) | `<target-repo>/deploy.{sh,ps1,bat}` or `<target-repo>/deploy-to-env.{sh,ps1,bat}` | The project's own `--env <env>` deploy hook, called by the skill's script at the very end, if it exists |
+| Target repo's script (project-provided) | `<target-repo>/deploy-to-dev.{sh,ps1,bat}` (env-specific, no arguments) or `<target-repo>/deploy.{sh,ps1,bat}` (`--env dev`) | The project's own deploy hook, called by the skill's script at the very end, if it exists — `deploy-to-dev.*` takes priority when both are present |
 
 Everywhere below, "this script" / "the aacpd script" means the former.
 
@@ -106,11 +106,10 @@ itself.
 5. `git push`.
 6. Deploy — **dev only, always**; this skill never touches qa/prod, and
    never generates or scaffolds a deploy script. It just looks for one
-   in the target repo, same-platform, in this order, and runs the
-   first one it finds with `--env dev`:
-   - `deploy.{sh,ps1,bat}` — the project's primary deploy entry point.
-   - else `deploy-to-env.{sh,ps1,bat}` — an alternate name some
-     projects use.
+   in the target repo, same-platform, in this order:
+   - `deploy-to-dev.{sh,ps1,bat}` — already env-specific, so it's run
+     with **no arguments**.
+   - else `deploy.{sh,ps1,bat}` — run as `deploy.{sh,ps1,bat} --env dev`.
    - else neither exists: deploy is skipped (not a failure) with a
      note telling you to add one. Setting up that script is on the
      **target project**, not this skill — see Gotchas.
@@ -176,12 +175,13 @@ under `issues/archive/`, a different path) for that signal.
 - **The target repo's deploy script is a per-project convention this
   skill never creates.** Deploy is step 5 of `aacpd` in name only —
   it's the one step this skill deliberately doesn't implement. Setting
-  up `deploy.{sh,ps1,bat}` (or `deploy-to-env.{sh,ps1,bat}`) in the
-  target repo, and making it accept `--env dev`, is the target
-  project's job (see the Quickstart in the `autotdd` repo's README).
-  If neither exists when `aacp` reaches step 6, it prints a note and
-  exits 0 — a project with no deploy automation yet doesn't fail the
-  whole merge, it just doesn't deploy.
+  up `deploy-to-dev.{sh,ps1,bat}` (no arguments — already env-specific)
+  or `deploy.{sh,ps1,bat}` (accepting `--env dev`) in the target repo is
+  the target project's job (see the Quickstart in the `autotdd` repo's
+  README); `deploy-to-dev.*` takes priority when both exist. If neither
+  exists when `aacp` reaches step 6, it prints a note and exits 0 — a
+  project with no deploy automation yet doesn't fail the whole merge,
+  it just doesn't deploy.
 - **Commit message trailer is baked into the script.** Don't pass a
   message that already includes `Co-Authored-By` — you'll get it
   twice.
